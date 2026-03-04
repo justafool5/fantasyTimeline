@@ -1,0 +1,125 @@
+{
+  "project_overview": {
+    "name": "ChronoWeave Timeline Visualizer",
+    "description": "A dual-theme (Fantasy & Sci-Fi) interactive timeline visualizer for world-builders.",
+    "tech_stack": [
+      "React 19",
+      "Tailwind CSS",
+      "Framer Motion",
+      "Lucide React",
+      "Shadcn UI (Manual Implementation)"
+    ],
+    "target_audience": "World-builders, RPG GMs, Writers"
+  },
+  "setup_instructions": {
+    "step_1_dependencies": "Execute: yarn add tailwindcss postcss autoprefixer class-variance-authority clsx tailwind-merge sonner date-fns",
+    "step_2_tailwind_init": "Execute: npx tailwindcss init -p",
+    "step_3_configure_tailwind": "Update tailwind.config.js to include content paths: ['./src/**/*.{js,jsx,ts,tsx}']. Add theme extensions defined in 'colors' section.",
+    "step_4_css_reset": "Create src/index.css with @tailwind directives. Import this in src/index.js. Remove old GlobalStyles."
+  },
+  "design_system": {
+    "typography": {
+      "font_families": {
+        "fantasy_heading": "Cormorant Garamond, serif",
+        "fantasy_body": "Lato, sans-serif",
+        "scifi_heading": "Orbitron, sans-serif",
+        "scifi_body": "Rajdhani, sans-serif"
+      },
+      "imports": [
+        "@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Lato:wght@400;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');"
+      ]
+    },
+    "colors": {
+      "fantasy": {
+        "bg": "#f4e4bc",
+        "bg_secondary": "#e6d2a0",
+        "text": "#2c1810",
+        "accent": "#8a0303",
+        "border": "#d4af37",
+        "muted": "#8b7355",
+        "card_bg": "#f9f1d8"
+      },
+      "scifi": {
+        "bg": "#050510",
+        "bg_secondary": "#0a0a20",
+        "text": "#e0e0ff",
+        "accent": "#00f3ff",
+        "accent_secondary": "#ff00ff",
+        "border": "#0066cc",
+        "muted": "#4a5568",
+        "card_bg": "rgba(10, 20, 40, 0.8)"
+      }
+    },
+    "visual_enhancers": {
+      "fantasy": {
+        "border_radius": "2px",
+        "shadow": "2px 4px 12px rgba(44, 24, 16, 0.3)",
+        "texture": "url('https://images.unsplash.com/photo-1561480343-f2121ab357a1?crop=entropy&cs=srgb&fm=jpg&q=85')",
+        "border_style": "double",
+        "card_effect": "sepia(0.2) contrast(1.1)"
+      },
+      "scifi": {
+        "border_radius": "0px",
+        "shadow": "0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1)",
+        "texture": "url('https://images.unsplash.com/photo-1768522345510-1eebe5183a21?crop=entropy&cs=srgb&fm=jpg&q=85')",
+        "border_style": "solid",
+        "card_effect": "backdrop-filter: blur(10px);"
+      }
+    }
+  },
+  "components": {
+    "TimelineContainer": {
+      "path": "src/components/Timeline/TimelineContainer.js",
+      "description": "Main scrollable area. Needs 'overflow-x-auto', 'whitespace-nowrap', and custom scrollbar styling.",
+      "styles": {
+        "fantasy": "bg-repeat scrollbar-thin scrollbar-thumb-amber-900 scrollbar-track-transparent",
+        "scifi": "bg-cover bg-fixed scrollbar-thin scrollbar-thumb-cyan-500 scrollbar-track-slate-900"
+      }
+    },
+    "TimelineAxis": {
+      "path": "src/components/Timeline/TimelineAxis.js",
+      "description": "The central line. Needs to handle negative (BCE) and positive years.",
+      "styles": {
+        "fantasy": "h-1 bg-amber-900 shadow-sm border-t border-amber-700 opacity-80",
+        "scifi": "h-0.5 bg-cyan-500 shadow-[0_0_10px_#00f3ff]"
+      }
+    },
+    "EventMarker": {
+      "path": "src/components/Timeline/EventMarker.js",
+      "description": "The node on the timeline. Clickable to open card.",
+      "styles": {
+        "fantasy": "w-4 h-4 rounded-full bg-red-900 border-2 border-amber-400 shadow-md transform hover:scale-125 transition-transform cursor-pointer",
+        "scifi": "w-3 h-3 rotate-45 bg-black border border-cyan-400 shadow-[0_0_8px_#00f3ff] hover:bg-cyan-400 hover:shadow-[0_0_15px_#00f3ff] transition-all cursor-pointer"
+      }
+    },
+    "EventCard": {
+      "path": "src/components/Timeline/EventCard.js",
+      "description": "Expandable details. Shows title, date, image, description.",
+      "styles": {
+        "fantasy": "bg-[#f9f1d8] border-4 border-double border-amber-900/40 text-amber-950 font-serif p-6 shadow-xl rounded-sm max-w-md",
+        "scifi": "bg-slate-900/90 border border-cyan-500/50 text-cyan-50 font-mono p-6 shadow-[0_0_20px_rgba(0,243,255,0.15)] backdrop-blur-md max-w-md relative overflow-hidden"
+      }
+    },
+    "ThemeSwitcher": {
+      "path": "src/components/UI/ThemeSwitcher.js",
+      "description": "Toggle between themes. Positioned absolute top-right.",
+      "styles": "fixed top-4 right-4 z-50 px-4 py-2 rounded font-bold transition-all"
+    }
+  },
+  "assets": {
+    "images": {
+      "fantasy_bg": "https://images.unsplash.com/photo-1561480343-f2121ab357a1?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "scifi_bg": "https://images.unsplash.com/photo-1768522345510-1eebe5183a21?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "fantasy_placeholder": "https://images.unsplash.com/photo-1579541814924-49fef17c5be5?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "scifi_placeholder": "https://images.unsplash.com/photo-1748739550781-44dbf5fe0cdd?crop=entropy&cs=srgb&fm=jpg&q=85"
+    }
+  },
+  "universal_guidelines": [
+    "Use data-testid attributes for all interactive elements (e.g., 'timeline-marker', 'theme-toggle').",
+    "Ensure text contrast meets WCAG AA standards, especially in Sci-Fi mode (cyan on dark).",
+    "Implement 'smooth' scrolling for the timeline container.",
+    "Use Framer Motion for card expansion (layoutId) and hover effects.",
+    "Do not use native alert() or confirm(); use Sonner toasts for notifications.",
+    "Structure the project features in 'src/features' or 'src/components' clearly."
+  ]
+}
