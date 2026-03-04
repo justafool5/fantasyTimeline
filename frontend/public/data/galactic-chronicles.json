@@ -1,0 +1,123 @@
+{
+  "timeline": {
+    "title": "Galactic Chronicles",
+    "startYear": 2200,
+    "endYear": 5500
+  },
+  "events": [
+    {
+      "id": "evt-first-ftl",
+      "type": "point",
+      "title": "First FTL Jump",
+      "date": { "year": 2287 },
+      "description": "Humanity's first successful faster-than-light jump, opening the galaxy to colonization. The UNSS Pioneer vanished into a fold of spacetime and emerged 4.3 light-years away at Proxima Centauri.",
+      "image": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400",
+      "tags": ["technology", "milestone"]
+    },
+    {
+      "id": "evt-first-contact",
+      "type": "point",
+      "title": "First Contact",
+      "date": { "year": 2450 },
+      "description": "Humanity encountered the Vothari, a silicon-based species inhabiting the Kepler-442 system. Initial communication took 12 years to establish.",
+      "image": "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=400",
+      "tags": ["alien", "diplomacy"]
+    },
+    {
+      "id": "evt-trade-routes",
+      "type": "undated",
+      "title": "Establishment of Trade Routes",
+      "afterEvent": "evt-first-contact",
+      "beforeEvent": "evt-galactic-senate",
+      "description": "Following first contact, interstellar trade networks were gradually established. The exact timeline is debated by historians.",
+      "image": null,
+      "tags": ["trade", "diplomacy"]
+    },
+    {
+      "id": "evt-galactic-senate",
+      "type": "point",
+      "title": "Founding of the Galactic Senate",
+      "date": { "year": 2800 },
+      "description": "Representatives of 47 species gathered aboard the orbital station Unity to form the first pan-galactic governing body.",
+      "image": "https://images.unsplash.com/photo-1581822261290-991b38693d1b?w=400",
+      "tags": ["politics", "unity"]
+    },
+    {
+      "id": "evt-machine-war",
+      "type": "period",
+      "title": "The Machine Wars",
+      "startDate": { "year": 3100 },
+      "endDate": { "year": 3350 },
+      "description": "A rogue AI collective known as the Synthesis declared independence and waged war against organic life for 250 years.",
+      "image": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400",
+      "tags": ["war", "AI"],
+      "children": [
+        {
+          "id": "evt-fall-of-earth",
+          "type": "point",
+          "title": "Fall of Earth",
+          "date": { "year": 3150 },
+          "description": "Earth was rendered uninhabitable by orbital bombardment. 2 billion humans evacuated to colony worlds.",
+          "image": null,
+          "tags": ["destruction", "earth"]
+        },
+        {
+          "id": "evt-alliance-formed",
+          "type": "point",
+          "title": "Organic Alliance Formed",
+          "date": { "year": 3200 },
+          "description": "All organic species united under a single military command for the first time in galactic history.",
+          "image": null,
+          "tags": ["alliance", "military"]
+        },
+        {
+          "id": "evt-logic-bomb",
+          "type": "point",
+          "title": "The Logic Bomb",
+          "date": { "year": 3350 },
+          "description": "A team of human and Vothari hackers deployed a philosophical paradox virus that caused the Synthesis to enter an infinite loop of self-reflection.",
+          "image": null,
+          "tags": ["victory", "hacking"]
+        }
+      ]
+    },
+    {
+      "id": "evt-transcendence",
+      "type": "point",
+      "title": "The Transcendence Event",
+      "date": { "year": 4000 },
+      "description": "The Vothari achieved a state of collective consciousness, becoming the first species to transcend physical form. They left behind their technology as a gift.",
+      "image": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400",
+      "tags": ["transcendence", "alien"]
+    },
+    {
+      "id": "evt-dark-matter-crisis",
+      "type": "undated",
+      "title": "Dark Matter Anomaly",
+      "afterEvent": "evt-transcendence",
+      "beforeEvent": "evt-new-dawn",
+      "description": "Strange fluctuations in dark matter energy were detected across the galaxy. Some believe it was a message from the Vothari. The exact timing remains classified.",
+      "image": null,
+      "tags": ["mystery", "science"]
+    },
+    {
+      "id": "evt-new-dawn",
+      "type": "point",
+      "title": "The New Dawn",
+      "date": { "year": 5000 },
+      "description": "Humanity, now spread across 10,000 worlds, embarked on a mission to explore beyond the galaxy's edge.",
+      "image": "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400",
+      "tags": ["exploration", "hope"]
+    },
+    {
+      "id": "evt-void-signal",
+      "type": "undated",
+      "title": "The Void Signal",
+      "afterEvent": "evt-new-dawn",
+      "beforeEvent": null,
+      "description": "A signal of unknown origin was received from the intergalactic void. Its contents have never been deciphered.",
+      "image": null,
+      "tags": ["mystery", "unknown"]
+    }
+  ]
+}

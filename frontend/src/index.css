@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Lato:wght@400;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Custom scrollbar styles */
+.timeline-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.timeline-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Fantasy scrollbar */
+.theme-fantasy .timeline-scroll::-webkit-scrollbar-thumb {
+  background: #8b7355;
+  border-radius: 2px;
+  border: 1px solid #d4af37;
+}
+
+/* Scifi scrollbar */
+.theme-scifi .timeline-scroll::-webkit-scrollbar-thumb {
+  background: #0066cc;
+  border-radius: 0;
+  box-shadow: 0 0 6px #00f3ff;
+}
+
+/* Fantasy theme globals */
+.theme-fantasy {
+  background-color: #f4e4bc;
+  color: #2c1810;
+  font-family: 'Lato', sans-serif;
+}
+
+.theme-fantasy h1,
+.theme-fantasy h2,
+.theme-fantasy h3,
+.theme-fantasy h4 {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+/* Scifi theme globals */
+.theme-scifi {
+  background-color: #050510;
+  color: #e0e0ff;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.theme-scifi h1,
+.theme-scifi h2,
+.theme-scifi h3,
+.theme-scifi h4 {
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Scanline effect for scifi */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 243, 255, 0.015) 2px,
+    rgba(0, 243, 255, 0.015) 4px
+  );
+  z-index: 1;
+}
+
+/* Fuzzy marker animation */
+@keyframes fuzzyPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.fuzzy-marker {
+  animation: fuzzyPulse 3s ease-in-out infinite;
+}
+
+/* Glow animation for scifi */
+@keyframes neonGlow {
+  0%, 100% { box-shadow: 0 0 5px #00f3ff, 0 0 10px rgba(0, 243, 255, 0.3); }
+  50% { box-shadow: 0 0 10px #00f3ff, 0 0 20px rgba(0, 243, 255, 0.5), 0 0 30px rgba(0, 243, 255, 0.2); }
+}
+
+.neon-glow {
+  animation: neonGlow 2s ease-in-out infinite;
+}
+
+/* Period bar hover effect */
+.period-bar {
+  transition: all 0.3s ease;
+}
+
+.period-bar:hover {
+  filter: brightness(1.2);
+}
+
+/* Smooth transitions */
+.theme-transition {
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
