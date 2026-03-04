@@ -54,6 +54,8 @@ Build a static timeline visualizer webapp (frontend-only, deployable via GitHub 
 ## Prioritized Backlog
 ### P0 - Done
 - All core features implemented and tested (15/15)
+- Production build with stable filenames (no hashes)
+- README.md (user-facing) and TECHNICAL.md (developer reference) created
 
 ### P1 - Next
 - Keyboard navigation (arrow keys to move between events)

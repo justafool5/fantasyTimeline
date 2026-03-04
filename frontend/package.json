@@ -11,15 +11,16 @@
     "lucide-react": "^0.577.0",
     "postcss": "8.4.49",
     "react": "^19.2.4",
+    "react-app-rewired": "^2.2.1",
     "react-dom": "^19.2.4",
     "react-scripts": "5.0.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "3.4.17"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
