@@ -23,6 +23,7 @@ export default function TimelineView() {
 
   const [addEventYear, setAddEventYear] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [hasDragged, setHasDragged] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
   const timelineAreaRef = useRef(null);
 
@@ -89,12 +90,14 @@ export default function TimelineView() {
   const handleMouseDown = useCallback((e) => {
     if (e.target.closest('[data-interactive]')) return;
     setIsDragging(true);
+    setHasDragged(false);
     setDragStart({ x: e.clientX, scrollLeft: scrollRef.current?.scrollLeft || 0 });
   }, [scrollRef]);
 
   const handleMouseMove = useCallback((e) => {
     if (!isDragging) return;
     const dx = e.clientX - dragStart.x;
+    if (Math.abs(dx) > 5) setHasDragged(true);
     if (scrollRef.current) {
       scrollRef.current.scrollLeft = dragStart.scrollLeft - dx;
     }
@@ -110,7 +113,7 @@ export default function TimelineView() {
   // Click on timeline to add event
   const handleTimelineClick = useCallback((e) => {
     if (e.target.closest('[data-interactive]')) return;
-    if (isDragging) return;
+    if (hasDragged) return;
     const rect = timelineAreaRef.current?.getBoundingClientRect();
     if (!rect || !meta) return;
     const scrollLeft = scrollRef.current?.scrollLeft || 0;
@@ -119,7 +122,7 @@ export default function TimelineView() {
     if (year >= meta.startYear && year <= meta.endYear) {
       setAddEventYear(year);
     }
-  }, [meta, pixelsPerYear, scrollRef, isDragging]);
+  }, [meta, pixelsPerYear, scrollRef, hasDragged]);
 
   if (!meta) return null;
 
