@@ -10,44 +10,47 @@
 ChronoWeave is a **pure static frontend app** — no backend, no database.
 
 ```
-frontend/                  ← React 19 app (Create React App + react-app-rewired)
-  public/
-    data/
-      manifest.json        ← registry of available timelines
-      ages-of-eldoria.json ← sample fantasy timeline
-      galactic-chronicles.json ← sample sci-fi timeline
-    index.html
-  src/
-    contexts/
-      ThemeContext.js       ← theme state (fantasy | scifi), provides toggle
-      TimelineContext.js    ← timeline data, local events, zoom, expansion state
-    components/
-      TimelineView.js      ← main timeline renderer (axis, markers, period bars, click-to-add)
-      EventCard.js         ← expanded event detail card
-      SubTimeline.js       ← inline sub-timeline for period events
-      AddEventForm.js      ← modal form for adding events
-      ThemeSwitcher.js     ← top-right toggle button
-      TimelinePicker.js    ← top-left dropdown to switch timelines
-      ZoomControls.js      ← bottom-right +/−/reset
-      JsonDownloadButton.js← bottom-left, visible when local events exist
-    utils/
-      timelineUtils.js     ← positioning math, year formatting, tag colors
-    App.js                 ← root: providers → AppContent
-    index.js               ← entry point
-    index.css              ← Tailwind directives, theme globals, animations
-  config-overrides.js      ← webpack overrides for stable filenames
-  tailwind.config.js
-  postcss.config.js
+/                              ← repo root (also the GH Pages deployment root)
+  index.html                   ← built entry point
+  static/js/main.js            ← built app bundle
+  static/css/main.css          ← built styles
+  data/                        ← timeline JSON data (served statically)
+    manifest.json
+    ages-of-eldoria.json
+    galactic-chronicles.json
+  docs/
+    README.md                  ← user-facing docs
+    TECHNICAL.md               ← this file
 
-build/                     ← production output (committed, ready for GitHub Pages)
-  index.html
-  static/
-    js/main.js
-    css/main.css
-  data/                    ← copies of public/data/
+  frontend/                    ← React source (not served by GH Pages)
+    public/
+      data/                    ← source data files
+        manifest.json
+        ages-of-eldoria.json
+        galactic-chronicles.json
+      index.html
+    src/
+      contexts/
+        ThemeContext.js
+        TimelineContext.js
+      components/
+        TimelineView.js
+        EventCard.js
+        SubTimeline.js
+        AddEventForm.js
+        ThemeSwitcher.js
+        TimelinePicker.js
+        ZoomControls.js
+        JsonDownloadButton.js
+      utils/
+        timelineUtils.js
+      App.js
+      index.js
+      index.css
+    config-overrides.js
+    tailwind.config.js
+    postcss.config.js
 ```
-
-The `backend/` folder contains a minimal FastAPI health-check endpoint used only for the Emergent preview environment. It is **not** part of the production app.
 
 ---
 
@@ -237,23 +240,38 @@ The build uses `react-app-rewired` with `config-overrides.js` to produce **stabl
 
 ### Deploy to GitHub Pages
 
-1. Build as above.
-2. Copy the contents of `frontend/build/` into your repository root (or a `docs/` folder).
-3. Enable GitHub Pages on that folder.
-4. The `homepage: "."` setting in `package.json` ensures all asset paths are relative.
+The repo root **is** the deployment target. After building, the root contains `index.html`, `static/`, and `data/` — GitHub Pages serves these directly.
 
-Alternatively, use a `gh-pages` branch:
-```bash
-# from repo root
-cp -r frontend/build/* .
-git add -A && git commit -m "deploy" && git push
+1. Build: `cd frontend && GENERATE_SOURCEMAP=false yarn build`
+2. Copy output to repo root: `cp -r frontend/build/* .`
+3. Commit and push the root-level files (`index.html`, `static/`, `data/`, `favicon.ico`, etc.)
+4. Enable GitHub Pages on the `main` branch, root folder (`/`)
+
+The `homepage` field in `package.json` is set to `https://justafool5.github.io/fantasyTimeline/`, which makes all asset paths absolute to that base (e.g. `/fantasyTimeline/static/js/main.js`). Change this if deploying elsewhere.
+
+**Repo structure for deployment:**
+```
+/                          ← repo root = GitHub Pages root
+  index.html               ← entry point (served by GH Pages)
+  static/js/main.js        ← app bundle (stable filename)
+  static/css/main.css      ← styles (stable filename)
+  data/manifest.json        ← timeline registry
+  data/ages-of-eldoria.json
+  data/galactic-chronicles.json
+  favicon.ico
+  docs/README.md            ← user documentation
+  docs/TECHNICAL.md         ← this file
+  frontend/                 ← source code (not served)
 ```
 
 ### Adding a new timeline
 
 1. Create `frontend/public/data/my-timeline.json` following the data model above.
 2. Add an entry to `frontend/public/data/manifest.json`.
-3. Rebuild (or, for GitHub Pages, also copy the new JSON into `build/data/`).
+3. Rebuild and copy to root:
+```bash
+cd frontend && GENERATE_SOURCEMAP=false yarn build && cp -r build/* ..
+```
 
 ---
 

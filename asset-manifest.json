@@ -1,0 +1,11 @@
+{
+  "files": {
+    "main.css": "/fantasyTimeline/static/css/main.css",
+    "main.js": "/fantasyTimeline/static/js/main.js",
+    "index.html": "/fantasyTimeline/index.html"
+  },
+  "entrypoints": [
+    "static/css/main.css",
+    "static/js/main.js"
+  ]
+}

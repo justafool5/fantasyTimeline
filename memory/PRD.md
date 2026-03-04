@@ -8,8 +8,7 @@ Build a static timeline visualizer webapp (frontend-only, deployable via GitHub 
 - **Backend**: Minimal FastAPI (health check only, not needed for production)
 - **Data**: Static JSON files in `public/data/` folder
 - **Storage**: LocalStorage for user-added events
-- **Deployment**: Static build, GitHub Pages compatible (`homepage: "."`)
-
+- **Deployment**: Built files at repo root, served by GitHub Pages at `https://justafool5.github.io/fantasyTimeline/`
 ## User Personas
 - World-builders creating fictional history timelines
 - Writers/authors mapping story chronology
