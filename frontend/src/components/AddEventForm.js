@@ -5,15 +5,17 @@ import { motion } from 'framer-motion';
 import { X, Plus, Globe } from 'lucide-react';
 import { formatYear } from '../utils/timelineUtils';
 
-export default function AddEventForm({ trackId, year, crossTrack, masterYear, parentPeriodId, onClose }) {
+export default function AddEventForm({ trackId, year, crossTrack, masterYear, parentPeriodId, forceCrossTrack, onClose }) {
   const { addEvent, allTracks } = useTimeline();
   const { theme } = useTheme();
 
   const initialTrack = trackId || (allTracks.length > 0 ? allTracks[0].id : null);
   const currentTrack = allTracks.find(t => t.id === initialTrack);
   
-  // When adding to a period, disable cross-track option
+  // When adding to a track-specific period, disable cross-track option
+  // When adding to a cross-track period (forceCrossTrack), force cross-track mode
   const isAddingToParent = !!parentPeriodId;
+  const isAddingToCrossTrackParent = forceCrossTrack;
 
   const [form, setForm] = useState({
     title: '',
@@ -26,7 +28,7 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
     image: '',
     tags: '',
     trackId: initialTrack,
-    isCrossTrack: isAddingToParent ? false : (crossTrack || false),
+    isCrossTrack: forceCrossTrack ? true : (isAddingToParent ? false : (crossTrack || false)),
   });
 
   const selectedTrack = allTracks.find(t => t.id === form.trackId);
@@ -122,8 +124,8 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
           />
         </div>
 
-        {/* Cross-Track Toggle - disabled when adding sub-events */}
-        {!isAddingToParent && (
+        {/* Cross-Track Toggle - disabled when adding sub-events to track-specific period */}
+        {!isAddingToParent && !isAddingToCrossTrackParent && (
           <div className="mb-4">
             <label className={`flex items-center gap-3 cursor-pointer p-3 transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30 hover:border-fantasy-accent/50' : 'bg-scifi-bg/50 border border-scifi-border/30 hover:border-scifi-accent/50'}`}>
               <input
@@ -146,15 +148,23 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
           </div>
         )}
         
-        {/* Show hint when adding sub-event */}
-        {isAddingToParent && (
+        {/* Show hint when adding sub-event to track-specific period */}
+        {isAddingToParent && !isAddingToCrossTrackParent && (
           <div className={`mb-4 p-3 text-sm ${theme === 'fantasy' ? 'bg-fantasy-accent/10 border border-fantasy-accent/30 text-fantasy-accent' : 'bg-scifi-accent/10 border border-scifi-accent/30 text-scifi-accent'}`}>
             Adding sub-event to period
           </div>
         )}
+        
+        {/* Show hint when adding sub-event to cross-track period */}
+        {isAddingToCrossTrackParent && (
+          <div className={`mb-4 p-3 text-sm flex items-center gap-2 ${theme === 'fantasy' ? 'bg-red-900/20 border border-red-700/40 text-red-400' : 'bg-pink-500/10 border border-pink-400/30 text-pink-400'}`}>
+            <Globe size={16} />
+            Adding cross-track sub-event (spans all tracks)
+          </div>
+        )}
 
-        {/* Track Selection (if not cross-track) */}
-        {!form.isCrossTrack && allTracks.length > 0 && (
+        {/* Track Selection (if not cross-track and not adding to cross-track parent) */}
+        {!form.isCrossTrack && !isAddingToCrossTrackParent && allTracks.length > 0 && (
           <div className="mb-4">
             <label className={labelClass}>Track</label>
             <select

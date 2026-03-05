@@ -148,14 +148,28 @@ export default function TimelineView() {
     const rect = axisRef?.getBoundingClientRect();
     if (!rect) return;
     const clickX = e.clientX - rect.left;
-    const localYear = positionToLocalYear(clickX, track, effectiveMasterRange, pixelsPerYear);
     
-    // When drilled in, events are added as children of the current period
-    setAddEventState({ 
-      trackId: track.id, 
-      year: localYear,
-      parentPeriodId: currentPeriod?.periodEvent?.id || null,
-    });
+    // Determine if we're in a cross-track period context
+    const isParentCrossTrack = currentPeriod?.periodEvent?.trackId === null;
+    
+    if (isParentCrossTrack) {
+      // Cross-track period: sub-events must also be cross-track, use master year
+      const masterYear = positionToMasterYear(clickX, effectiveMasterRange, pixelsPerYear);
+      setAddEventState({ 
+        crossTrack: true,
+        masterYear: masterYear,
+        parentPeriodId: currentPeriod?.periodEvent?.id,
+        forceCrossTrack: true, // Signal that this cannot be changed
+      });
+    } else {
+      // Track-specific period or top-level: use local year
+      const localYear = positionToLocalYear(clickX, track, effectiveMasterRange, pixelsPerYear);
+      setAddEventState({ 
+        trackId: track.id, 
+        year: localYear,
+        parentPeriodId: currentPeriod?.periodEvent?.id || null,
+      });
+    }
   }, [effectiveMasterRange, pixelsPerYear, currentPeriod]);
 
   if (!timelineMeta || !allTracks.length) {
@@ -334,6 +348,7 @@ export default function TimelineView() {
             crossTrack={addEventState.crossTrack}
             masterYear={addEventState.masterYear}
             parentPeriodId={addEventState.parentPeriodId}
+            forceCrossTrack={addEventState.forceCrossTrack}
             onClose={() => setAddEventState(null)}
           />
         )}
