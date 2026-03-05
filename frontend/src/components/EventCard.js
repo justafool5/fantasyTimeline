@@ -145,8 +145,8 @@ export default function EventCard({ event, onClose, onUpdate, onDelete, onDrillI
           </div>
         ) : event.image ? (
           <div className="relative z-10">
-            <img src={event.image} alt={event.title} className={`w-full h-48 object-cover ${theme === 'fantasy' ? 'brightness-90' : 'opacity-90'}`} loading="lazy" />
-            {theme === 'fantasy' && <div className="absolute inset-0 bg-gradient-to-t from-[#1e160d] to-transparent opacity-40" />}
+            <img src={event.image} alt={event.title} className={`w-full h-auto object-contain max-h-[50vh] ${theme === 'fantasy' ? 'brightness-90' : 'opacity-90'}`} loading="lazy" />
+            {theme === 'fantasy' && <div className="absolute inset-0 bg-gradient-to-t from-[#1e160d] to-transparent opacity-40 pointer-events-none" />}
           </div>
         ) : null}
 
