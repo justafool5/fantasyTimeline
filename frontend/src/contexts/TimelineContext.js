@@ -177,33 +177,53 @@ export function TimelineProvider({ children }) {
     });
   }, [currentTimelineId]);
 
-  // Add a new event (can be a child of a period)
+  // Helper to recursively find and update an event by ID
+  const findAndUpdateEvent = (events, targetId, updater) => {
+    for (let i = 0; i < events.length; i++) {
+      if (events[i].id === targetId) {
+        events[i] = updater(events[i]);
+        return true;
+      }
+      if (events[i].children && events[i].children.length > 0) {
+        if (findAndUpdateEvent(events[i].children, targetId, updater)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  // Add a new event (can be a child of a period at any nesting level)
   const addEvent = useCallback((event, parentPeriodId = null) => {
     const newEvent = { ...event, id: `local-${Date.now()}`, isLocal: true };
     
     if (parentPeriodId) {
-      // Add as a child to a period event
-      // First check local events
+      // Add as a child to a period event - search recursively
+      let found = false;
+      
+      // First check local events (recursively)
       setLocalEvents(prev => {
-        const parentIdx = prev.findIndex(e => e.id === parentPeriodId);
-        if (parentIdx >= 0) {
-          const next = [...prev];
-          const parent = { ...next[parentIdx] };
-          parent.children = [...(parent.children || []), newEvent];
-          next[parentIdx] = parent;
+        const next = JSON.parse(JSON.stringify(prev)); // Deep clone
+        found = findAndUpdateEvent(next, parentPeriodId, (parent) => ({
+          ...parent,
+          children: [...(parent.children || []), newEvent]
+        }));
+        if (found) {
           saveLocalEvents(currentTimelineId, next);
           return next;
         }
         return prev;
       });
       
-      // Also check JSON data
-      if (timelineData) {
-        const parentIdx = timelineData.events.findIndex(e => e.id === parentPeriodId);
-        if (parentIdx >= 0) {
-          const parent = timelineData.events[parentIdx];
-          parent.children = [...(parent.children || []), newEvent];
-          setTimelineData({ ...timelineData });
+      // If not found in local, check JSON data (recursively)
+      if (!found && timelineData) {
+        const eventsCopy = JSON.parse(JSON.stringify(timelineData.events));
+        found = findAndUpdateEvent(eventsCopy, parentPeriodId, (parent) => ({
+          ...parent,
+          children: [...(parent.children || []), newEvent]
+        }));
+        if (found) {
+          setTimelineData({ ...timelineData, events: eventsCopy });
         }
       }
     } else {

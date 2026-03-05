@@ -49,10 +49,28 @@ export default function TimelineView() {
   const timelineAreaRef = useRef(null);
   
   // Navigation stack for drilling into periods
-  const [navStack, setNavStack] = useState([]); // [{ periodEvent, parentTrackId }]
+  const [navStack, setNavStack] = useState([]); // [{ periodEventId, parentTrackId }]
   
-  // Current period context (if drilled in)
-  const currentPeriod = navStack.length > 0 ? navStack[navStack.length - 1] : null;
+  // Helper to find an event by ID recursively
+  const findEventById = useCallback((events, id) => {
+    for (const evt of events) {
+      if (evt.id === id) return evt;
+      if (evt.children && evt.children.length > 0) {
+        const found = findEventById(evt.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+  
+  // Current period context (if drilled in) - always get fresh from allEvents
+  const currentPeriod = useMemo(() => {
+    if (navStack.length === 0) return null;
+    const { periodEventId, parentTrackId } = navStack[navStack.length - 1];
+    const periodEvent = findEventById(allEvents, periodEventId);
+    if (!periodEvent) return null;
+    return { periodEvent, parentTrackId };
+  }, [navStack, allEvents, findEventById]);
 
   // Calculate effective master range (constrained when drilled into a period)
   const effectiveMasterRange = useMemo(() => {
@@ -80,7 +98,7 @@ export default function TimelineView() {
   const displayEvents = useMemo(() => {
     if (!currentPeriod) return allEvents;
     
-    // When drilled in, show children of the period event
+    // When drilled in, show children of the period event (now always fresh)
     const pe = currentPeriod.periodEvent;
     return pe.children || [];
   }, [currentPeriod, allEvents]);
@@ -367,16 +385,20 @@ export default function TimelineView() {
           // Search in both allEvents and displayEvents (for sub-events when drilled in)
           let evt = allEvents.find(e => e.id === expandedEvent);
           if (!evt && currentPeriod) {
-            // Also search in the period's children
+            // Also search in the period's children (use findEventById for deep search)
+            evt = findEventById(allEvents, expandedEvent);
+          }
+          if (!evt) {
+            // Last resort: search in displayEvents directly
             evt = displayEvents.find(e => e.id === expandedEvent);
           }
           if (!evt) return null;
           
           // Drill-in handler for period events - always allow drilling in
           const handleDrillIn = evt.type === 'period' ? () => {
-            // Push to navigation stack and close the card
+            // Push to navigation stack with just the ID (not the full object)
             setNavStack(prev => [...prev, { 
-              periodEvent: evt, 
+              periodEventId: evt.id, 
               parentTrackId: evt.trackId 
             }]);
             setExpandedEvent(null);
