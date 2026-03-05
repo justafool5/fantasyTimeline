@@ -1,0 +1,10 @@
+{
+  "timeline": {
+    "title": "One last job...",
+    "description": "Timeline of the major events in the party's history.",
+    "masterStart": -100,
+    "masterEnd": 100
+  },
+  "tracks": [],
+  "events": []
+}
