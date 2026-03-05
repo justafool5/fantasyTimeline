@@ -44,15 +44,31 @@ export function TimelineProvider({ children }) {
   const [expandedEvent, setExpandedEvent] = useState(null);
   const scrollRef = useRef(null);
 
-  // Load manifest (with cache-busting)
+  // Load manifest and then fetch metadata from each timeline file
   useEffect(() => {
     const cacheBuster = `?t=${Date.now()}`;
     fetch(`${process.env.PUBLIC_URL}/data/manifest.json${cacheBuster}`, { cache: 'no-store' })
       .then(r => r.json())
-      .then(data => {
-        setManifest(data);
-        if (data.timelines.length > 0) {
-          setCurrentTimelineId(data.timelines[0].id);
+      .then(async (data) => {
+        // Load title/description from each timeline file
+        const timelinesWithMeta = await Promise.all(
+          data.timelines.map(async (entry) => {
+            try {
+              const res = await fetch(`${process.env.PUBLIC_URL}/${entry.url}${cacheBuster}`, { cache: 'no-store' });
+              const timelineData = await res.json();
+              return {
+                ...entry,
+                title: timelineData.timeline?.title || entry.id,
+                description: timelineData.timeline?.description || '',
+              };
+            } catch {
+              return { ...entry, title: entry.id, description: '' };
+            }
+          })
+        );
+        setManifest({ ...data, timelines: timelinesWithMeta });
+        if (timelinesWithMeta.length > 0) {
+          setCurrentTimelineId(timelinesWithMeta[0].id);
         }
       })
       .catch(() => setError('Failed to load timeline manifest'));
@@ -77,7 +93,7 @@ export function TimelineProvider({ children }) {
         setLoading(false);
       })
       .catch(() => {
-        setError(`Failed to load timeline: ${entry.title}`);
+        setError(`Failed to load timeline: ${entry.title || entry.id}`);
         setLoading(false);
       });
   }, [manifest, currentTimelineId]);

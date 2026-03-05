@@ -201,9 +201,17 @@ export default function TimelineView() {
             </button>
           )}
           
-          <h1 data-testid="timeline-title" className={`text-2xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-lg tracking-widest'}`}>
-            {currentPeriod ? currentPeriod.periodEvent.title : timelineMeta.title}
-          </h1>
+          <div className="flex flex-col items-center">
+            <h1 data-testid="timeline-title" className={`text-2xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-lg tracking-widest'}`}>
+              {currentPeriod ? currentPeriod.periodEvent.title : timelineMeta.title}
+            </h1>
+            {/* Description - only show on main timeline, not when drilled in */}
+            {!currentPeriod && timelineMeta.description && (
+              <p data-testid="timeline-description" className={`text-sm mt-1 max-w-xl ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-body' : 'text-scifi-muted font-scifi-body'}`}>
+                {timelineMeta.description}
+              </p>
+            )}
+          </div>
           
           {/* Period date range indicator */}
           {currentPeriod && (() => {

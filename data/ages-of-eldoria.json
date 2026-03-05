@@ -1,6 +1,7 @@
 {
   "timeline": {
     "title": "Ages of Eldoria",
+    "description": "The complete history of the realm of Eldoria, from the Sundering to the Age of Restoration",
     "masterStart": -3000,
     "masterEnd": 2000
   },

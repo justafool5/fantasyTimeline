@@ -1,6 +1,7 @@
 {
   "timeline": {
     "title": "Galactic Chronicles",
+    "description": "The rise and fall of civilizations across the known galaxy",
     "masterStart": 2000,
     "masterEnd": 5000
   },
