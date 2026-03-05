@@ -143,7 +143,13 @@ export default function TimelineView() {
     if (scrollRef.current) scrollRef.current.scrollLeft = dragStart.scrollLeft - dx;
   }, [isDragging, dragStart, scrollRef]);
 
-  const handleMouseUp = useCallback(() => setIsDragging(false), []);
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    // Reset drag flag after a short delay so click events can check it first
+    setTimeout(() => {
+      hasDraggedRef.current = false;
+    }, 50);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('mouseup', handleMouseUp);
