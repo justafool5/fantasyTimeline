@@ -9,7 +9,6 @@ export default function TimelinePicker() {
   const [open, setOpen] = React.useState(false);
 
   if (!manifest) return null;
-
   const current = manifest.timelines.find(t => t.id === currentTimelineId);
 
   const handleSelect = (tl) => {
@@ -26,7 +25,7 @@ export default function TimelinePicker() {
         className={`
           flex items-center gap-2 px-4 py-2 font-bold text-sm transition-all
           ${theme === 'fantasy'
-            ? 'bg-fantasy-card text-fantasy-text border-2 border-double border-fantasy-border font-fantasy-heading hover:bg-fantasy-bg-secondary'
+            ? 'bg-fantasy-card text-fantasy-accent border border-fantasy-border font-fantasy-heading hover:border-fantasy-accent'
             : 'bg-scifi-bg-secondary text-scifi-accent border border-scifi-border font-scifi-heading hover:border-scifi-accent'
           }
         `}
@@ -40,7 +39,7 @@ export default function TimelinePicker() {
         <div className={`
           mt-1 min-w-[250px] overflow-hidden
           ${theme === 'fantasy'
-            ? 'bg-fantasy-card border-2 border-double border-fantasy-border shadow-lg'
+            ? 'bg-fantasy-card border border-fantasy-border shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
             : 'bg-scifi-bg-secondary border border-scifi-border shadow-[0_0_20px_rgba(0,243,255,0.15)]'
           }
         `}>
@@ -53,7 +52,7 @@ export default function TimelinePicker() {
                 w-full text-left px-4 py-3 transition-all block
                 ${tl.id === currentTimelineId
                   ? theme === 'fantasy'
-                    ? 'bg-fantasy-bg-secondary text-fantasy-accent font-bold'
+                    ? 'bg-fantasy-accent/10 text-fantasy-accent font-bold'
                     : 'bg-scifi-accent/10 text-scifi-accent font-bold'
                   : theme === 'fantasy'
                     ? 'text-fantasy-text hover:bg-fantasy-bg-secondary'
@@ -61,12 +60,8 @@ export default function TimelinePicker() {
                 }
               `}
             >
-              <div className={`font-bold text-sm ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}>
-                {tl.title}
-              </div>
-              <div className={`text-xs mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                {tl.description}
-              </div>
+              <div className={`font-bold text-sm ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}>{tl.title}</div>
+              <div className={`text-xs mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>{tl.description}</div>
             </button>
           ))}
         </div>

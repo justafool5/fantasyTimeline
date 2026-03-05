@@ -72,12 +72,10 @@ export function positionToYear(x, startYear, pixelsPerYear) {
 }
 
 /**
- * Format a year for display (handles BCE)
+ * Format a year for display (plain number, no BCE/CE)
  */
 export function formatYear(year) {
-  if (year < 0) return `${Math.abs(year)} BCE`;
-  if (year === 0) return 'Year 0';
-  return `${year} CE`;
+  return `${year}`;
 }
 
 /**

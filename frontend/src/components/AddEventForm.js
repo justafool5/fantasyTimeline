@@ -5,13 +5,15 @@ import { motion } from 'framer-motion';
 import { X, Plus } from 'lucide-react';
 import { formatYear } from '../utils/timelineUtils';
 
-export default function AddEventForm({ year, onClose }) {
-  const { addLocalEvent, allEvents } = useTimeline();
+export default function AddEventForm({ year, parentContext, onClose }) {
+  const { addLocalEvent, addChildEvent, allEvents } = useTimeline();
   const { theme } = useTheme();
+
+  const isSubEvent = !!parentContext;
 
   const [form, setForm] = useState({
     title: '',
-    type: 'point',
+    type: isSubEvent ? 'point' : 'point',
     year: year || 0,
     endYear: (year || 0) + 100,
     description: '',
@@ -45,14 +47,18 @@ export default function AddEventForm({ year, onClose }) {
       event.beforeEvent = form.beforeEvent || null;
     }
 
-    addLocalEvent(event);
+    if (isSubEvent) {
+      addChildEvent(parentContext.parentEventId, event);
+    } else {
+      addLocalEvent(event);
+    }
     onClose();
   };
 
   const datedEvents = allEvents.filter(e => e.type === 'point' || e.type === 'period');
 
   const inputClass = theme === 'fantasy'
-    ? 'bg-fantasy-bg border-2 border-fantasy-border text-fantasy-text font-fantasy-body px-3 py-2 w-full focus:outline-none focus:border-fantasy-accent'
+    ? 'bg-fantasy-bg border border-fantasy-border/60 text-fantasy-text font-fantasy-body px-3 py-2 w-full focus:outline-none focus:border-fantasy-accent'
     : 'bg-scifi-bg border border-scifi-border text-scifi-text font-scifi-body px-3 py-2 w-full focus:outline-none focus:border-scifi-accent';
 
   const labelClass = `block mb-1 text-xs font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-muted font-scifi-heading'}`;
@@ -64,7 +70,7 @@ export default function AddEventForm({ year, onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(44,24,16,0.5)' : 'rgba(0,0,0,0.8)' }}
+      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(10,8,4,0.7)' : 'rgba(0,0,0,0.8)' }}
       onClick={onClose}
     >
       <motion.form
@@ -77,14 +83,14 @@ export default function AddEventForm({ year, onClose }) {
         className={`
           w-full max-w-md max-h-[80vh] overflow-y-auto p-6
           ${theme === 'fantasy'
-            ? 'bg-fantasy-card border-4 border-double border-fantasy-border shadow-xl'
+            ? 'bg-fantasy-card border border-fantasy-border shadow-[0_4px_40px_rgba(0,0,0,0.7)]'
             : 'bg-scifi-bg-secondary border border-scifi-border shadow-[0_0_30px_rgba(0,243,255,0.1)] backdrop-blur-md'
           }
         `}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className={`text-xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-accent text-base'}`}>
-            Add New Event
+          <h3 className={`text-xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-base'}`}>
+            {isSubEvent ? 'Add Sub-Event' : 'Add New Event'}
           </h3>
           <button type="button" onClick={onClose} data-testid="close-add-form" className={`p-1 ${theme === 'fantasy' ? 'text-fantasy-muted hover:text-fantasy-text' : 'text-scifi-muted hover:text-scifi-accent'}`}>
             <X size={18} />
@@ -105,36 +111,38 @@ export default function AddEventForm({ year, onClose }) {
           />
         </div>
 
-        {/* Type */}
-        <div className="mb-4">
-          <label className={labelClass}>Type</label>
-          <div className="flex gap-2">
-            {['point', 'period', 'undated'].map(t => (
-              <button
-                key={t}
-                type="button"
-                data-testid={`event-type-${t}`}
-                onClick={() => setForm(f => ({ ...f, type: t }))}
-                className={`
-                  px-3 py-1.5 text-xs font-bold uppercase transition-all
-                  ${form.type === t
-                    ? theme === 'fantasy'
-                      ? 'bg-fantasy-accent text-fantasy-card border-2 border-fantasy-border'
-                      : 'bg-scifi-accent text-scifi-bg border border-scifi-accent'
-                    : theme === 'fantasy'
-                      ? 'bg-fantasy-bg text-fantasy-muted border-2 border-fantasy-border hover:bg-fantasy-bg-secondary'
-                      : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:border-scifi-accent'
-                  }
-                `}
-              >
-                {t}
-              </button>
-            ))}
+        {/* Type (only for main timeline) */}
+        {!isSubEvent && (
+          <div className="mb-4">
+            <label className={labelClass}>Type</label>
+            <div className="flex gap-2">
+              {['point', 'period', 'undated'].map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  data-testid={`event-type-${t}`}
+                  onClick={() => setForm(f => ({ ...f, type: t }))}
+                  className={`
+                    px-3 py-1.5 text-xs font-bold uppercase transition-all
+                    ${form.type === t
+                      ? theme === 'fantasy'
+                        ? 'bg-fantasy-accent text-fantasy-bg border border-fantasy-accent'
+                        : 'bg-scifi-accent text-scifi-bg border border-scifi-accent'
+                      : theme === 'fantasy'
+                        ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border/60 hover:border-fantasy-accent/50'
+                        : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:border-scifi-accent'
+                    }
+                  `}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Date fields based on type */}
-        {form.type === 'point' && (
+        {/* Date fields */}
+        {(form.type === 'point' || isSubEvent) && (
           <div className="mb-4">
             <label className={labelClass}>Year</label>
             <input
@@ -144,65 +152,39 @@ export default function AddEventForm({ year, onClose }) {
               onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
               className={inputClass}
             />
-            <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-              Use negative for BCE. Current: {formatYear(parseInt(form.year) || 0)}
+            <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+              Current: {formatYear(parseInt(form.year) || 0)}
             </p>
           </div>
         )}
 
-        {form.type === 'period' && (
+        {form.type === 'period' && !isSubEvent && (
           <div className="mb-4 grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>Start Year</label>
-              <input
-                data-testid="event-start-year-input"
-                type="number"
-                value={form.year}
-                onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
-                className={inputClass}
-              />
+              <input data-testid="event-start-year-input" type="number" value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>End Year</label>
-              <input
-                data-testid="event-end-year-input"
-                type="number"
-                value={form.endYear}
-                onChange={e => setForm(f => ({ ...f, endYear: e.target.value }))}
-                className={inputClass}
-              />
+              <input data-testid="event-end-year-input" type="number" value={form.endYear} onChange={e => setForm(f => ({ ...f, endYear: e.target.value }))} className={inputClass} />
             </div>
           </div>
         )}
 
-        {form.type === 'undated' && (
+        {form.type === 'undated' && !isSubEvent && (
           <div className="mb-4 grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>After Event</label>
-              <select
-                data-testid="event-after-select"
-                value={form.afterEvent}
-                onChange={e => setForm(f => ({ ...f, afterEvent: e.target.value }))}
-                className={inputClass}
-              >
+              <select data-testid="event-after-select" value={form.afterEvent} onChange={e => setForm(f => ({ ...f, afterEvent: e.target.value }))} className={inputClass}>
                 <option value="">(Timeline Start)</option>
-                {datedEvents.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.title}</option>
-                ))}
+                {datedEvents.map(ev => (<option key={ev.id} value={ev.id}>{ev.title}</option>))}
               </select>
             </div>
             <div>
               <label className={labelClass}>Before Event</label>
-              <select
-                data-testid="event-before-select"
-                value={form.beforeEvent}
-                onChange={e => setForm(f => ({ ...f, beforeEvent: e.target.value }))}
-                className={inputClass}
-              >
+              <select data-testid="event-before-select" value={form.beforeEvent} onChange={e => setForm(f => ({ ...f, beforeEvent: e.target.value }))} className={inputClass}>
                 <option value="">(Timeline End)</option>
-                {datedEvents.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.title}</option>
-                ))}
+                {datedEvents.map(ev => (<option key={ev.id} value={ev.id}>{ev.title}</option>))}
               </select>
             </div>
           </div>
@@ -223,27 +205,13 @@ export default function AddEventForm({ year, onClose }) {
         {/* Image URL */}
         <div className="mb-4">
           <label className={labelClass}>Image URL</label>
-          <input
-            data-testid="event-image-input"
-            type="url"
-            value={form.image}
-            onChange={e => setForm(f => ({ ...f, image: e.target.value }))}
-            className={inputClass}
-            placeholder="https://..."
-          />
+          <input data-testid="event-image-input" type="url" value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} className={inputClass} placeholder="https://..." />
         </div>
 
         {/* Tags */}
         <div className="mb-6">
           <label className={labelClass}>Tags (comma-separated)</label>
-          <input
-            data-testid="event-tags-input"
-            type="text"
-            value={form.tags}
-            onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-            className={inputClass}
-            placeholder="war, magic, discovery"
-          />
+          <input data-testid="event-tags-input" type="text" value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} className={inputClass} placeholder="war, magic, discovery" />
         </div>
 
         {/* Submit */}
@@ -253,13 +221,13 @@ export default function AddEventForm({ year, onClose }) {
           className={`
             w-full flex items-center justify-center gap-2 px-4 py-3 font-bold text-sm transition-all
             ${theme === 'fantasy'
-              ? 'bg-fantasy-accent text-fantasy-card border-2 border-double border-fantasy-border font-fantasy-heading hover:bg-red-900'
+              ? 'bg-fantasy-accent text-fantasy-bg border border-fantasy-accent font-fantasy-heading hover:bg-yellow-600'
               : 'bg-scifi-accent text-scifi-bg border border-scifi-accent font-scifi-heading hover:bg-cyan-300'
             }
           `}
         >
           <Plus size={16} />
-          Add Event
+          {isSubEvent ? 'Add Sub-Event' : 'Add Event'}
         </button>
       </motion.form>
     </motion.div>

@@ -77,6 +77,42 @@ export function TimelineProvider({ children }) {
     });
   }, [currentTimelineId]);
 
+  // Add a child event to a period event (supports both JSON-loaded and local periods)
+  const addChildEvent = useCallback((parentEventId, childEvent) => {
+    const child = { ...childEvent, isLocal: true };
+
+    // Check if parent is in loaded data
+    if (timelineData) {
+      const parentInData = timelineData.events.find(e => e.id === parentEventId);
+      if (parentInData) {
+        if (!parentInData.children) parentInData.children = [];
+        parentInData.children.push(child);
+        setTimelineData({ ...timelineData });
+        // Also save the child as a local event so it shows up in exports
+        setLocalEvents(prev => {
+          const next = [...prev, { ...child, _parentId: parentEventId }];
+          saveLocalEvents(currentTimelineId, next);
+          return next;
+        });
+        return;
+      }
+    }
+
+    // Check if parent is a local event
+    setLocalEvents(prev => {
+      const next = prev.map(e => {
+        if (e.id === parentEventId) {
+          return { ...e, children: [...(e.children || []), child] };
+        }
+        return e;
+      });
+      // Also store the child itself for export
+      next.push({ ...child, _parentId: parentEventId });
+      saveLocalEvents(currentTimelineId, next);
+      return next;
+    });
+  }, [currentTimelineId, timelineData]);
+
   const removeLocalEvent = useCallback((eventId) => {
     setLocalEvents(prev => {
       const next = prev.filter(e => e.id !== eventId);
@@ -117,6 +153,7 @@ export function TimelineProvider({ children }) {
       expandedPeriod,
       setExpandedPeriod,
       addLocalEvent,
+      addChildEvent,
       removeLocalEvent,
       downloadLocalEventsJSON,
       switchTimeline,

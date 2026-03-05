@@ -1,46 +1,65 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
-import { resolveEventPositions, formatYear, getTagColor } from '../utils/timelineUtils';
+import { resolveEventPositions, positionToYear, formatYear, getTagColor } from '../utils/timelineUtils';
 import { ChevronUp, MapPin } from 'lucide-react';
+import AddEventForm from './AddEventForm';
+import { AnimatePresence } from 'framer-motion';
 
 const SUB_PX_PER_YEAR = 2;
 const SUB_PADDING = 60;
+const SUB_AXIS_TOP = 80;
+const SUB_HITBOX_H = 24;
 
 export default function SubTimeline({ parentEvent, parentMeta, parentPixelsPerYear }) {
   const { theme } = useTheme();
   const [expandedChild, setExpandedChild] = useState(null);
+  const [addYear, setAddYear] = useState(null);
+  const subAxisRef = useRef(null);
 
   const subMeta = useMemo(() => ({
     startYear: parentEvent.startDate.year,
     endYear: parentEvent.endDate.year,
   }), [parentEvent.startDate.year, parentEvent.endDate.year]);
 
+  // Merge parent children with any local children
+  const children = useMemo(() => parentEvent.children || [], [parentEvent.children]);
+
   const { positions, totalWidth } = useMemo(() => {
-    return resolveEventPositions(parentEvent.children, subMeta, SUB_PX_PER_YEAR);
-  }, [parentEvent.children, subMeta]);
+    return resolveEventPositions(children, subMeta, SUB_PX_PER_YEAR);
+  }, [children, subMeta]);
 
   const sortedChildren = useMemo(() => {
-    return [...parentEvent.children].sort((a, b) => {
+    return [...children].sort((a, b) => {
       const posA = positions[a.id]?.x || 0;
       const posB = positions[b.id]?.x || 0;
       return posA - posB;
     }).map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
-  }, [parentEvent.children, positions]);
+  }, [children, positions]);
 
-  // Year markers for sub-timeline
   const yearMarkers = useMemo(() => {
     const range = subMeta.endYear - subMeta.startYear;
     let step = Math.max(1, Math.floor(range / 8));
     if (step > 50) step = Math.ceil(step / 50) * 50;
     else if (step > 10) step = Math.ceil(step / 10) * 10;
-
     const markers = [];
     const start = Math.ceil(subMeta.startYear / step) * step;
     for (let y = start; y <= subMeta.endYear; y += step) {
       markers.push({ year: y, x: (y - subMeta.startYear) * SUB_PX_PER_YEAR });
     }
     return markers;
+  }, [subMeta]);
+
+  // FIX #5: Click on sub-axis to add event
+  const handleSubAxisClick = useCallback((e) => {
+    const rect = subAxisRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const scrollLeft = subAxisRef.current?.parentElement?.parentElement?.scrollLeft || 0;
+    const clickX = e.clientX - rect.left + scrollLeft;
+    const year = positionToYear(clickX, subMeta.startYear, SUB_PX_PER_YEAR);
+    if (year >= subMeta.startYear && year <= subMeta.endYear) {
+      setAddYear(year);
+    }
   }, [subMeta]);
 
   return (
@@ -53,29 +72,32 @@ export default function SubTimeline({ parentEvent, parentMeta, parentPixelsPerYe
       className={`
         mx-4 mb-4 overflow-hidden
         ${theme === 'fantasy'
-          ? 'border-2 border-double border-fantasy-border bg-fantasy-bg-secondary/50'
+          ? 'border border-fantasy-border/40 bg-fantasy-bg-secondary/60'
           : 'border border-scifi-border bg-scifi-bg-secondary/50'
         }
       `}
     >
-      {/* Sub-timeline header */}
+      {/* Header */}
       <div className={`
         flex items-center gap-2 px-4 py-2
         ${theme === 'fantasy'
-          ? 'bg-fantasy-card border-b-2 border-double border-fantasy-border'
+          ? 'bg-fantasy-card/80 border-b border-fantasy-border/40'
           : 'bg-scifi-bg-secondary border-b border-scifi-border'
         }
       `}>
         <ChevronUp size={14} className={theme === 'fantasy' ? 'text-fantasy-accent' : 'text-scifi-accent'} />
-        <h4 className={`text-sm font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-accent text-xs'}`}>
-          Sub-events of: {parentEvent.title}
+        <h4 className={`text-sm font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-xs'}`}>
+          {parentEvent.title}
         </h4>
         <span className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
           ({formatYear(subMeta.startYear)} — {formatYear(subMeta.endYear)})
         </span>
+        <span className={`text-[10px] ml-auto ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted/40'}`}>
+          Click line to add sub-event
+        </span>
       </div>
 
-      {/* Sub-timeline content */}
+      {/* Content */}
       <div className="overflow-x-auto p-4 timeline-scroll">
         <div
           className="relative"
@@ -90,24 +112,37 @@ export default function SubTimeline({ parentEvent, parentMeta, parentPixelsPerYe
           {yearMarkers.map(m => (
             <div
               key={m.year}
-              className="absolute flex flex-col items-center"
-              style={{ left: m.x + SUB_PADDING, top: 60, transform: 'translateX(-50%)' }}
+              className="absolute flex flex-col items-center pointer-events-none"
+              style={{ left: m.x + SUB_PADDING, top: SUB_AXIS_TOP - 15, transform: 'translateX(-50%)' }}
             >
-              <div className={`h-6 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/30' : 'bg-scifi-border/20'}`} style={{ marginTop: 12 }} />
-              <span className={`text-[9px] mt-0.5 whitespace-nowrap select-none ${theme === 'fantasy' ? 'text-fantasy-muted/50' : 'text-scifi-muted/30'}`}>
+              <div className={`h-6 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/25' : 'bg-scifi-border/20'}`} />
+              <span className={`text-[9px] mt-0.5 whitespace-nowrap select-none ${theme === 'fantasy' ? 'text-fantasy-muted/40' : 'text-scifi-muted/30'}`}>
                 {formatYear(m.year)}
               </span>
             </div>
           ))}
 
-          {/* Sub axis */}
+          {/* Sub axis — clickable hitbox */}
           <div
-            className={`
-              absolute left-0 right-0
-              ${theme === 'fantasy' ? 'h-[2px] bg-amber-900/40' : 'h-px bg-cyan-500/50'}
-            `}
-            style={{ top: 80, marginLeft: SUB_PADDING - 10, marginRight: SUB_PADDING - 10 }}
-          />
+            ref={subAxisRef}
+            className="absolute axis-hitbox"
+            data-testid={`sub-timeline-axis-${parentEvent.id}`}
+            style={{
+              top: SUB_AXIS_TOP - SUB_HITBOX_H / 2,
+              height: SUB_HITBOX_H,
+              left: SUB_PADDING - 10,
+              right: SUB_PADDING - 10,
+            }}
+            onClick={handleSubAxisClick}
+          >
+            <div
+              className={`absolute left-0 right-0 ${theme === 'fantasy'
+                ? 'h-[2px] bg-gradient-to-r from-transparent via-fantasy-accent/40 to-transparent'
+                : 'h-px bg-cyan-500/50'
+              }`}
+              style={{ top: '50%', transform: 'translateY(-50%)' }}
+            />
+          </div>
 
           {/* Sub event markers */}
           {sortedChildren.map(evt => {
@@ -118,23 +153,24 @@ export default function SubTimeline({ parentEvent, parentMeta, parentPixelsPerYe
             return (
               <div
                 key={evt.id}
+                data-interactive="true"
                 className="absolute"
-                style={{ left: pos.x + SUB_PADDING, top: 80, transform: 'translateX(-50%)', zIndex: isExpanded ? 20 : 5 }}
+                style={{ left: pos.x + SUB_PADDING, top: SUB_AXIS_TOP, transform: 'translateX(-50%)', zIndex: isExpanded ? 20 : 5 }}
               >
                 {/* Connector */}
                 <div
-                  className={`absolute left-1/2 -translate-x-1/2 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/40' : 'bg-scifi-border/30'}`}
+                  className={`absolute left-1/2 -translate-x-1/2 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/30' : 'bg-scifi-border/25'}`}
                   style={evt.above ? { bottom: 0, height: 30 } : { top: 0, height: 30 }}
                 />
 
                 {/* Dot */}
                 <button
                   data-testid={`sub-event-marker-${evt.id}`}
-                  onClick={() => setExpandedChild(isExpanded ? null : evt.id)}
+                  onClick={(e) => { e.stopPropagation(); setExpandedChild(isExpanded ? null : evt.id); }}
                   className={`
                     relative z-10 transition-all duration-200
                     ${theme === 'fantasy'
-                      ? `w-3 h-3 rounded-full border border-fantasy-border shadow hover:scale-150 ${pos.isFuzzy ? 'bg-fantasy-muted border-dashed' : 'bg-fantasy-accent'}`
+                      ? `w-3 h-3 rounded-full border border-fantasy-border hover:scale-150 ${pos.isFuzzy ? 'bg-fantasy-muted/50 border-dashed' : 'bg-fantasy-accent'}`
                       : `w-2 h-2 rotate-45 border hover:scale-150 ${pos.isFuzzy ? 'bg-scifi-muted border-dashed border-scifi-border' : 'bg-black border-cyan-400 shadow-[0_0_6px_#00f3ff]'}`
                     }
                   `}
@@ -160,19 +196,19 @@ export default function SubTimeline({ parentEvent, parentMeta, parentPixelsPerYe
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className={`
-                      absolute left-1/2 -translate-x-1/2 w-56 p-3 z-20
+                      absolute left-1/2 -translate-x-1/2 w-60 p-3 z-20
                       ${theme === 'fantasy'
-                        ? 'bg-fantasy-card border-2 border-double border-fantasy-border shadow-lg'
+                        ? 'bg-fantasy-card border border-fantasy-border shadow-[0_4px_20px_rgba(0,0,0,0.6)]'
                         : 'bg-slate-900/95 border border-cyan-500/40 shadow-[0_0_15px_rgba(0,243,255,0.1)] backdrop-blur-md'
                       }
                     `}
                     style={evt.above ? { bottom: 20, marginBottom: 50 } : { top: 20, marginTop: 50 }}
                   >
                     <div className="flex items-start justify-between mb-1">
-                      <h5 className={`text-xs font-bold ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading text-scifi-accent'}`}>
+                      <h5 className={`text-xs font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent'}`}>
                         {evt.title}
                       </h5>
-                      <button onClick={() => setExpandedChild(null)} className={`text-xs ml-2 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                      <button onClick={(e) => { e.stopPropagation(); setExpandedChild(null); }} className={`text-xs ml-2 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
                         x
                       </button>
                     </div>
@@ -181,7 +217,7 @@ export default function SubTimeline({ parentEvent, parentMeta, parentPixelsPerYe
                         <MapPin size={10} /> {formatYear(evt.date.year)}
                       </div>
                     )}
-                    <p className={`text-[11px] leading-relaxed ${theme === 'fantasy' ? 'font-fantasy-body' : 'font-scifi-body'}`}>
+                    <p className={`text-[11px] leading-relaxed ${theme === 'fantasy' ? 'font-fantasy-body text-fantasy-text/80' : 'font-scifi-body'}`}>
                       {evt.description}
                     </p>
                     {evt.tags?.length > 0 && (
@@ -203,6 +239,17 @@ export default function SubTimeline({ parentEvent, parentMeta, parentPixelsPerYe
           })}
         </div>
       </div>
+
+      {/* Add Event Form for sub-timeline */}
+      <AnimatePresence>
+        {addYear !== null && (
+          <AddEventForm
+            year={addYear}
+            parentContext={{ parentEventId: parentEvent.id, subMeta }}
+            onClose={() => setAddYear(null)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

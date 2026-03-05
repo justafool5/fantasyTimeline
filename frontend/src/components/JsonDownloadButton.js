@@ -16,7 +16,7 @@ export default function JsonDownloadButton() {
       className={`
         fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all
         ${theme === 'fantasy'
-          ? 'bg-fantasy-accent text-fantasy-card border-2 border-double border-fantasy-border font-fantasy-heading hover:bg-red-900'
+          ? 'bg-fantasy-card text-fantasy-accent border border-fantasy-border font-fantasy-heading hover:border-fantasy-accent'
           : 'bg-scifi-bg-secondary text-scifi-accent border border-scifi-accent font-scifi-heading hover:bg-scifi-accent hover:text-scifi-bg'
         }
       `}

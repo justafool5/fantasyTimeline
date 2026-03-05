@@ -4,20 +4,21 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'fantasy-heading': ['"Cormorant Garamond"', 'serif'],
-        'fantasy-body': ['Lato', 'sans-serif'],
+        'fantasy-heading': ['Cinzel', 'serif'],
+        'fantasy-body': ['"Crimson Text"', 'Georgia', 'serif'],
         'scifi-heading': ['Orbitron', 'sans-serif'],
         'scifi-body': ['Rajdhani', 'sans-serif'],
       },
       colors: {
         fantasy: {
-          bg: '#f4e4bc',
-          'bg-secondary': '#e6d2a0',
-          text: '#2c1810',
-          accent: '#8a0303',
-          border: '#d4af37',
-          muted: '#8b7355',
-          card: '#f9f1d8',
+          bg: '#1a1209',
+          'bg-secondary': '#231a0f',
+          text: '#d4c4a0',
+          accent: '#c9a84c',
+          'accent-red': '#8a2020',
+          border: '#5c3a1e',
+          muted: '#7a6a50',
+          card: '#1e160d',
         },
         scifi: {
           bg: '#050510',
