@@ -1,162 +1,159 @@
 {
   "timeline": {
     "title": "Ages of Eldoria",
-    "startYear": -3000,
-    "endYear": 1500
+    "description": "The complete history of the realm of Eldoria, from the Sundering to the Age of Restoration",
+    "masterStart": -3000,
+    "masterEnd": 2000
   },
+  "tracks": [
+    {
+      "id": "aeloran",
+      "name": "Aeloran Empire",
+      "calendarName": "Imperial Reckoning",
+      "abbr": "IR",
+      "color": "#c9a84c",
+      "epoch": -2000,
+      "startYear": -1000,
+      "endYear": 3500
+    },
+    {
+      "id": "thalassian",
+      "name": "Thalassian Dominion",
+      "calendarName": "Thalassian Count",
+      "abbr": "TC",
+      "color": "#4a9eff",
+      "epoch": -800,
+      "startYear": -500,
+      "endYear": 2500
+    },
+    {
+      "id": "sylvari",
+      "name": "Sylvari Confederation",
+      "calendarName": "Moonrise Era",
+      "abbr": "ME",
+      "color": "#50c878",
+      "epoch": -2500,
+      "startYear": 0,
+      "endYear": 4000
+    }
+  ],
   "events": [
     {
       "id": "evt-sundering",
+      "trackId": null,
       "type": "point",
       "title": "The Sundering",
-      "date": { "year": -2800 },
+      "masterDate": { "year": -2800 },
       "description": "The world was torn asunder when the Elder Gods clashed, shattering the primordial continent into the five great lands. Mountains rose from the sea, rivers changed course, and the sky burned for a hundred years.",
       "image": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400",
       "tags": ["cataclysm", "divine"]
     },
     {
-      "id": "evt-first-elves",
+      "id": "evt-aeloran-founding",
+      "trackId": "aeloran",
       "type": "point",
-      "title": "Awakening of the First Elves",
-      "date": { "year": -2500 },
-      "description": "In the twilight groves of Sylvaria, the first of the Elder Elves opened their eyes, born from the dreaming of the World Tree.",
-      "image": "https://images.unsplash.com/photo-1440581572325-0bea30075d9d?w=400",
-      "tags": ["elves", "origin"]
-    },
-    {
-      "id": "evt-dragon-pact",
-      "type": "undated",
-      "title": "The Dragon Pact",
-      "afterEvent": "evt-sundering",
-      "beforeEvent": "evt-first-elves",
-      "description": "Sometime between the Sundering and the Elven Awakening, the Great Wyrms forged a pact of non-interference with the mortal races. The details are lost to time.",
-      "image": null,
-      "tags": ["dragons", "pact"]
-    },
-    {
-      "id": "evt-war-of-crowns",
-      "type": "period",
-      "title": "The War of Crowns",
-      "startDate": { "year": -1800 },
-      "endDate": { "year": -1650 },
-      "description": "A devastating 150-year conflict between the Seven Kingdoms for dominance over the central plains. Entire bloodlines were extinguished and ancient fortresses reduced to rubble.",
-      "image": "https://images.unsplash.com/photo-1528459584353-5297db1a9c01?w=400",
-      "tags": ["war", "kingdoms"],
-      "children": [
-        {
-          "id": "evt-siege-ironhold",
-          "type": "point",
-          "title": "Siege of Ironhold",
-          "date": { "year": -1780 },
-          "description": "The mighty fortress of Ironhold fell after a year-long siege, marking the first major victory of the Southern Alliance.",
-          "image": null,
-          "tags": ["siege", "war"]
-        },
-        {
-          "id": "evt-battle-crimson-field",
-          "type": "point",
-          "title": "Battle of the Crimson Field",
-          "date": { "year": -1720 },
-          "description": "The bloodiest single battle in Eldorian history. Over 40,000 warriors fell in a single day.",
-          "image": null,
-          "tags": ["battle", "war"]
-        },
-        {
-          "id": "evt-treaty-ashenmere",
-          "type": "point",
-          "title": "Treaty of Ashenmere",
-          "date": { "year": -1650 },
-          "description": "The exhausted kingdoms finally agreed to peace, dividing the central plains among the surviving three kingdoms.",
-          "image": null,
-          "tags": ["treaty", "peace"]
-        }
-      ]
-    },
-    {
-      "id": "evt-mage-academy",
-      "type": "point",
-      "title": "Founding of the Arcane Academy",
-      "date": { "year": -1200 },
-      "description": "The greatest minds of the age gathered in the Floating Citadel to establish the first formal school of magic, codifying spellcraft for generations to come.",
-      "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
-      "tags": ["magic", "academy"]
-    },
-    {
-      "id": "evt-dark-rising",
-      "type": "point",
-      "title": "The Dark Rising",
-      "date": { "year": -500 },
-      "description": "The Necromancer King Malachar rose from his forgotten tomb, unleashing a plague of undeath across the northern kingdoms.",
-      "image": "https://images.unsplash.com/photo-1509248961221-27528cf900bd?w=400",
-      "tags": ["undead", "evil"]
-    },
-    {
-      "id": "evt-prophecy",
-      "type": "undated",
-      "title": "The Starfall Prophecy",
-      "afterEvent": "evt-dark-rising",
-      "beforeEvent": "evt-lightbringer",
-      "description": "An unnamed seer foretold that a child born under falling stars would end the reign of darkness. The exact date was never recorded.",
-      "image": null,
-      "tags": ["prophecy", "mystery"]
-    },
-    {
-      "id": "evt-lightbringer",
-      "type": "point",
-      "title": "Rise of the Lightbringer",
+      "title": "Founding of Aeloran",
       "date": { "year": 0 },
-      "description": "Year Zero. A humble farmer's child, marked by starlight, united the fractured kingdoms and defeated the Necromancer King in single combat atop the Spire of Shadows.",
-      "image": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400",
-      "tags": ["hero", "divine"]
+      "description": "The first Emperor Aelor united the scattered human tribes and established the Aeloran Empire, marking year zero of the Imperial Reckoning.",
+      "image": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400",
+      "tags": ["founding", "empire"]
     },
     {
       "id": "evt-golden-age",
+      "trackId": "aeloran",
       "type": "period",
       "title": "The Golden Age",
-      "startDate": { "year": 100 },
-      "endDate": { "year": 800 },
-      "description": "Seven centuries of unprecedented peace, artistic flowering, and magical advancement. The great cathedrals and sky-bridges were built during this era.",
+      "startDate": { "year": 500 },
+      "endDate": { "year": 1200 },
+      "description": "A period of unprecedented peace and prosperity in the Aeloran Empire. Arts, magic, and scholarship flourished.",
       "image": "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=400",
-      "tags": ["peace", "prosperity"],
-      "children": [
-        {
-          "id": "evt-sky-bridges",
-          "type": "point",
-          "title": "Construction of the Sky Bridges",
-          "date": { "year": 250 },
-          "description": "Magical bridges spanning hundreds of miles were built, connecting the five great cities.",
-          "image": null,
-          "tags": ["construction", "magic"]
-        },
-        {
-          "id": "evt-great-library",
-          "type": "point",
-          "title": "The Great Library Founded",
-          "date": { "year": 500 },
-          "description": "All knowledge of the realm was gathered into a single magnificent structure.",
-          "image": null,
-          "tags": ["knowledge", "culture"]
-        }
-      ]
+      "tags": ["prosperity", "culture"],
+      "children": []
     },
     {
-      "id": "evt-second-sundering",
+      "id": "evt-war-crowns",
+      "trackId": "aeloran",
+      "type": "period",
+      "title": "War of the Crowns",
+      "startDate": { "year": 1800 },
+      "endDate": { "year": 2100 },
+      "description": "A devastating civil war that nearly tore the empire apart as three claimants fought for the throne.",
+      "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+      "tags": ["war", "civil"],
+      "children": []
+    },
+    {
+      "id": "evt-thalas-rise",
+      "trackId": "thalassian",
       "type": "point",
-      "title": "The Second Sundering",
-      "date": { "year": 1200 },
-      "description": "A catastrophic magical experiment gone wrong tore a rift between worlds, flooding Eldoria with creatures from beyond the veil.",
-      "image": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400",
-      "tags": ["cataclysm", "magic"]
+      "title": "Rise of Thalas",
+      "date": { "year": 0 },
+      "description": "The sea-king Thalas conquered the coastal cities and founded the Thalassian Dominion, establishing dominance over the eastern seas.",
+      "image": "https://images.unsplash.com/photo-1509248961221-27528cf900bd?w=400",
+      "tags": ["founding", "naval"]
     },
     {
-      "id": "evt-restoration",
-      "type": "undated",
-      "title": "The Restoration Begins",
-      "afterEvent": "evt-second-sundering",
-      "beforeEvent": null,
-      "description": "After the Second Sundering, the surviving peoples began the slow process of rebuilding. The exact date is disputed among scholars.",
-      "image": null,
-      "tags": ["recovery", "hope"]
+      "id": "evt-sea-wars",
+      "trackId": "thalassian",
+      "type": "period",
+      "title": "The Sea Wars",
+      "startDate": { "year": 800 },
+      "endDate": { "year": 1100 },
+      "description": "A series of naval conflicts between the Thalassian Dominion and the pirate kingdoms of the Shattered Isles.",
+      "image": "https://images.unsplash.com/photo-1440581572325-0bea30075d9d?w=400",
+      "tags": ["war", "naval"],
+      "children": []
+    },
+    {
+      "id": "evt-great-eclipse",
+      "trackId": null,
+      "type": "point",
+      "title": "The Great Eclipse",
+      "masterDate": { "year": 0 },
+      "description": "A total eclipse that lasted three days, during which strange creatures emerged from the shadows. Celebrated and feared across all cultures.",
+      "image": "https://images.unsplash.com/photo-1528459584353-5297db1a9c01?w=400",
+      "tags": ["celestial", "mystery"]
+    },
+    {
+      "id": "evt-sylvari-awakening",
+      "trackId": "sylvari",
+      "type": "point",
+      "title": "The Awakening",
+      "date": { "year": 0 },
+      "description": "The Sylvari elves emerged from their millennia-long communion with the World Tree, forming the Confederation of the Silver Leaves.",
+      "image": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400",
+      "tags": ["founding", "elven"]
+    },
+    {
+      "id": "evt-bloom-wars",
+      "trackId": "sylvari",
+      "type": "period",
+      "title": "The Bloom Wars",
+      "startDate": { "year": 1500 },
+      "endDate": { "year": 1800 },
+      "description": "Territorial conflicts with the expanding human empires over the sacred groves.",
+      "tags": ["war", "territory"],
+      "children": []
+    },
+    {
+      "id": "evt-dark-age",
+      "trackId": null,
+      "type": "period",
+      "title": "The Dark Age",
+      "masterStartDate": { "year": 500 },
+      "masterEndDate": { "year": 900 },
+      "description": "A time of plague, famine, and darkness that affected all civilizations. Magic waned, and many ancient secrets were lost.",
+      "image": "https://images.unsplash.com/photo-1505506874110-6a7a69069a08?w=400",
+      "tags": ["darkness", "plague"]
+    },
+    {
+      "id": "evt-alliance",
+      "trackId": null,
+      "type": "point",
+      "title": "The Grand Alliance",
+      "masterDate": { "year": 1500 },
+      "description": "For the first time in history, all three great powers signed a treaty of mutual defense against the rising threat from the Shadowlands.",
+      "tags": ["diplomacy", "alliance"]
     }
   ]
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { BookOpen, ChevronDown } from 'lucide-react';
@@ -7,6 +7,20 @@ export default function TimelinePicker() {
   const { manifest, currentTimelineId, switchTimeline } = useTimeline();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = React.useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
 
   if (!manifest) return null;
   const current = manifest.timelines.find(t => t.id === currentTimelineId);
@@ -18,7 +32,7 @@ export default function TimelinePicker() {
   };
 
   return (
-    <div className="fixed top-4 left-4 z-50" data-testid="timeline-picker">
+    <div ref={dropdownRef} className="fixed top-4 left-4 z-50" data-testid="timeline-picker">
       <button
         data-testid="timeline-picker-button"
         onClick={() => setOpen(!open)}

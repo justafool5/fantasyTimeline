@@ -1,76 +1,65 @@
-# ChronoWeave Timeline Visualizer - PRD
+# ChronoWeave PRD
 
 ## Original Problem Statement
-Build a static timeline visualizer webapp (frontend-only, deployable via GitHub Pages) that loads data from static JSON files. Must support arbitrary dates (negative/positive years), three event types (point, period, undated), expandable event cards with images/tags, sub-timeline drill-down for period events, and dual themes (Heroic Fantasy / Sci-Fi).
+Multi-track coordinated timeline visualizer for world-builders. Users can visualize multiple civilizations/empires with independent calendar systems, all aligned on a hidden master timeline.
 
 ## Architecture
-- **Frontend**: React 19 + Tailwind CSS 3 + Framer Motion + Lucide React
-- **Backend**: Minimal FastAPI (health check only, not needed for production)
-- **Data**: Static JSON files in `public/data/` folder
-- **Storage**: LocalStorage for user-added events
-- **Deployment**: Built files at repo root, served by GitHub Pages at `https://justafool5.github.io/fantasyTimeline/`
+- **Frontend**: React 19, Tailwind CSS 3, Framer Motion
+- **Backend**: None (static site for GitHub Pages)
+- **Storage**: localStorage for user-created tracks/events, JSON files for bundled timelines
+
 ## User Personas
-- World-builders creating fictional history timelines
-- Writers/authors mapping story chronology
-- Tabletop RPG game masters organizing campaign lore
-- History enthusiasts visualizing custom timelines
+1. **World-builders** - Creating fantasy/sci-fi universes with multiple civilizations
+2. **Writers** - Tracking story timelines across different narrative perspectives
+3. **Historians** - Visualizing parallel historical timelines with different calendars
 
-## Core Requirements
-1. Horizontal scrollable timeline with zoom (Ctrl+Scroll, buttons)
-2. Three event types: Point (exact date), Period (start+end, with sub-events), Undated (fuzzy placement)
-3. Expandable event cards with title, date, image, description, colored tags
-4. Sub-timeline drill-down for period events (inline below main timeline)
-5. Add new events by clicking the timeline
-6. JSON download of locally-added events
-7. Timeline picker (manifest.json for multiple timelines)
-8. Dual themes: Fantasy (parchment/medieval) and Sci-Fi (dark/neon)
+## Core Requirements (Static)
+- Multiple stacked horizontal track timelines
+- Each track has its own calendar system (name, abbreviation, epoch offset)
+- Cross-track events that span all tracks as vertical lines/bands
+- Year labels in local calendar only (never show master reference to users)
+- Add Track modal with color picker, calendar settings, epoch, range
+- Add Event form with track selector and cross-track checkbox
+- Edit events including year/reference year fields
+- Period events with "Open Sub-Timeline" action
+- Synchronized zoom across all tracks
+- Export full timeline as JSON
 
-## What's Been Implemented (March 2026)
-- [x] Full timeline rendering with all 3 event types
-- [x] Event card expansion with image, description, colored tags
-- [x] Period bar visualization and sub-timeline drill-down
-- [x] Undated events with fuzzy/dashed marker style
-- [x] Zoom controls (button + Ctrl+Scroll)
-- [x] Drag to scroll + horizontal scrolling
-- [x] Theme switcher (Fantasy/Sci-Fi) with full theming
-- [x] Timeline picker with manifest.json
-- [x] Add Event form (click on timeline, fill form)
-- [x] LocalStorage persistence for new events
-- [x] JSON download of local events
-- [x] Sample data: Ages of Eldoria (fantasy) + Galactic Chronicles (sci-fi)
-- [x] Year formatting: BCE/CE with negative year support
-
-## Data Model
-```json
-{
-  "timeline": { "title": "...", "startYear": -3000, "endYear": 1500 },
-  "events": [
-    { "id": "...", "type": "point|period|undated", "title": "...", "date/startDate/endDate": {...}, "description": "...", "image": "url", "tags": ["..."], "children": [...] }
-  ]
-}
-```
+## What's Been Implemented
+### 2025-03-05
+- Initial multi-track feature implementation
+- Stacked parallel axes layout (Option A design)
+- Cross-track events as vertical spanning lines/bands
+- EventCard shows equivalent years in all track calendars for cross-track events
+- Add Track modal with full configuration
+- Add Event form with cross-track checkbox
+- Year editing for both track-specific and cross-track events
+- Period events clickable with "Open Sub-Timeline" button
+- Two sample timelines: Ages of Eldoria (fantasy), Galactic Chronicles (sci-fi)
+- Bug fixes: drag-to-scroll, cache-busting, image aspect ratio
 
 ## Prioritized Backlog
-### P0 - Done
-- All core features implemented and tested (15/15)
-- Production build with stable filenames (no hashes)
-- README.md (user-facing) and TECHNICAL.md (developer reference) created
-- v4 Fixes: sub-timeline fills screen (1 context event each side), axis click year accuracy fixed, full JSON export always available
+### P0 (Critical)
+- ✅ Multi-track display
+- ✅ Cross-track events
+- ✅ Year editing
+- ✅ Period event clickable
 
-### P1 - Next
-- Keyboard navigation (arrow keys to move between events)
-- Touch/mobile optimization (pinch-to-zoom, swipe)
-- Event search/filter by tags or keywords
+### P1 (High)
+- Full sub-timeline drill-down for period events
+- Track deletion UI
 
-### P2 - Future
-- Timeline export as image (screenshot)
-- Drag-and-drop event reordering
-- Undo/redo for local event edits
-- Custom color themes beyond Fantasy/Sci-Fi
-- Import events from JSON file upload
-- Collaborative editing via shareable links
+### P2 (Medium)
+- Mobile responsive layout
+- Tag-based filtering
+- Keyboard accessibility
+
+### P3 (Low)
+- Drag-to-reorder tracks
+- Import timeline JSON
+- Search functionality
 
 ## Next Tasks
-1. Consider adding tag-based filtering
-2. Mobile-responsive layout optimization
-3. Keyboard accessibility improvements
+1. Implement full sub-timeline navigation stack for period events
+2. Add track deletion button (with confirmation)
+3. Test and fix any remaining cross-track period interaction issues

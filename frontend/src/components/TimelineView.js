@@ -2,109 +2,116 @@ import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AnimatePresence } from 'framer-motion';
-import { resolveEventPositions, getPeriodBarDimensions, positionToYear, formatYear } from '../utils/timelineUtils';
+import {
+  generateTrackYearMarkers,
+  getTrackPeriodBarDimensions,
+  positionToLocalYear,
+  positionToMasterYear,
+  formatYear,
+  localToMaster,
+  masterToLocal,
+} from '../utils/timelineUtils';
 import EventCard from './EventCard';
 import AddEventForm from './AddEventForm';
-import { ChevronRight } from 'lucide-react';
+import AddTrackForm from './AddTrackForm';
+import EditTimelineForm from './EditTimelineForm';
+import { Plus, ArrowLeft, Settings } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const TIMELINE_PADDING = 120;
-const MARKER_AREA_HEIGHT = 200;
-const AXIS_HITBOX_HEIGHT = 30;
+const TRACK_HEIGHT = 180;
+const AXIS_OFFSET = 100;
+const MARKER_AREA_HEIGHT = 60;
 
 export default function TimelineView() {
   const {
-    currentView, breadcrumbs, effectiveMeta,
-    zoom, setZoom,
-    expandedEvent, setExpandedEvent,
-    drillInto, navigateTo,
-    scrollRef, navStack,
-    updateEvent, deleteEvent,
+    timelineMeta,
+    allTracks,
+    allEvents,
+    crossTrackEvents,
+    masterRange,
+    zoom,
+    setZoom,
+    expandedEvent,
+    setExpandedEvent,
+    scrollRef,
   } = useTimeline();
   const { theme } = useTheme();
 
-  const [addEventYear, setAddEventYear] = useState(null);
-  const [addEventParentId, setAddEventParentId] = useState(null);
+  const [addEventState, setAddEventState] = useState(null); // { trackId, year } or { crossTrack: true, masterYear }
+  const [showAddTrack, setShowAddTrack] = useState(false);
+  const [showEditTimeline, setShowEditTimeline] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const hasDraggedRef = useRef(false);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
   const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
   const timelineAreaRef = useRef(null);
-  const axisRef = useRef(null);
-
-  const meta = currentView.meta;
-  const events = currentView.events;
-  const contextEvents = useMemo(() => currentView.contextEvents || [], [currentView.contextEvents]);
-  const isRoot = currentView.isRoot;
-  const pixelsPerYear = BASE_PX_PER_YEAR * zoom;
-
-  // All events for positioning (main + context)
-  const allDisplayEvents = useMemo(() => [...events, ...contextEvents], [events, contextEvents]);
-
-  // Compute effective meta range that includes context events
-  const effectiveDisplayMeta = useMemo(() => {
-    if (!meta) return null;
-    if (contextEvents.length === 0) return meta;
-
-    let minYear = meta.startYear;
-    let maxYear = meta.endYear;
-
-    for (const evt of contextEvents) {
-      if (evt.type === 'point' && evt.date) {
-        minYear = Math.min(minYear, evt.date.year);
-        maxYear = Math.max(maxYear, evt.date.year);
-      } else if (evt.type === 'period' && evt.startDate && evt.endDate) {
-        minYear = Math.min(minYear, evt.startDate.year);
-        maxYear = Math.max(maxYear, evt.endDate.year);
+  
+  // Navigation stack for drilling into periods
+  const [navStack, setNavStack] = useState([]); // [{ periodEventId, parentTrackId }]
+  
+  // Helper to find an event by ID recursively
+  const findEventById = useCallback((events, id) => {
+    for (const evt of events) {
+      if (evt.id === id) return evt;
+      if (evt.children && evt.children.length > 0) {
+        const found = findEventById(evt.children, id);
+        if (found) return found;
       }
     }
+    return null;
+  }, []);
+  
+  // Current period context (if drilled in) - always get fresh from allEvents
+  const currentPeriod = useMemo(() => {
+    if (navStack.length === 0) return null;
+    const { periodEventId, parentTrackId } = navStack[navStack.length - 1];
+    const periodEvent = findEventById(allEvents, periodEventId);
+    if (!periodEvent) return null;
+    return { periodEvent, parentTrackId };
+  }, [navStack, allEvents, findEventById]);
 
-    // Add padding around the range
-    const range = maxYear - minYear;
-    const pad = Math.max(range * 0.05, 10);
-    return { ...meta, startYear: Math.floor(minYear - pad), endYear: Math.ceil(maxYear + pad) };
-  }, [meta, contextEvents]);
-
-  // Resolve positions for all displayed events using the expanded range
-  const { positions, totalWidth } = useMemo(() => {
-    if (!effectiveDisplayMeta || !allDisplayEvents.length) return { positions: {}, totalWidth: 0 };
-    return resolveEventPositions(allDisplayEvents, effectiveDisplayMeta, pixelsPerYear);
-  }, [allDisplayEvents, effectiveDisplayMeta, pixelsPerYear]);
-
-  // Period events (main only, not context)
-  const periodEvents = useMemo(() => events.filter(e => e.type === 'period'), [events]);
-  const contextPeriodEvents = useMemo(() => contextEvents.filter(e => e.type === 'period'), [contextEvents]);
-
-  // Year markers (use effectiveDisplayMeta for positioning consistency)
-  const yearMarkers = useMemo(() => {
-    if (!effectiveDisplayMeta) return [];
-    const range = effectiveDisplayMeta.endYear - effectiveDisplayMeta.startYear;
-    let step;
-    if (range * pixelsPerYear < 800) step = Math.max(1, Math.floor(range / 10));
-    else if (pixelsPerYear > 3) step = 50;
-    else if (pixelsPerYear > 1) step = 100;
-    else if (pixelsPerYear > 0.5) step = 200;
-    else step = 500;
-    const markers = [];
-    const start = Math.ceil(effectiveDisplayMeta.startYear / step) * step;
-    for (let y = start; y <= effectiveDisplayMeta.endYear; y += step) {
-      markers.push({ year: y, x: (y - effectiveDisplayMeta.startYear) * pixelsPerYear });
+  // Calculate effective master range (constrained when drilled into a period)
+  const effectiveMasterRange = useMemo(() => {
+    if (!currentPeriod) return masterRange;
+    
+    const pe = currentPeriod.periodEvent;
+    if (pe.trackId === null) {
+      // Cross-track period uses master dates
+      return {
+        start: pe.masterStartDate.year - 50, // Add padding
+        end: pe.masterEndDate.year + 50,
+      };
+    } else {
+      // Track-specific period - convert to master
+      const track = allTracks.find(t => t.id === pe.trackId);
+      if (!track) return masterRange;
+      return {
+        start: localToMaster(pe.startDate.year, track) - 50,
+        end: localToMaster(pe.endDate.year, track) + 50,
+      };
     }
-    return markers;
-  }, [effectiveDisplayMeta, pixelsPerYear]);
+  }, [currentPeriod, masterRange, allTracks]);
 
-  // Sort and alternate main events
-  const sortedEvents = useMemo(() => {
-    return [...events].sort((a, b) => (positions[a.id]?.x || 0) - (positions[b.id]?.x || 0))
-      .map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
-  }, [events, positions]);
+  // Filter events based on drill-in context
+  const displayEvents = useMemo(() => {
+    if (!currentPeriod) return allEvents;
+    
+    // When drilled in, show children of the period event (now always fresh)
+    const pe = currentPeriod.periodEvent;
+    return pe.children || [];
+  }, [currentPeriod, allEvents]);
 
-  // Sort context events
-  const sortedContextEvents = useMemo(() => {
-    return [...contextEvents].sort((a, b) => (positions[a.id]?.x || 0) - (positions[b.id]?.x || 0))
-      .map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
-  }, [contextEvents, positions]);
+  // Filter cross-track events based on drill-in context
+  const displayCrossTrackEvents = useMemo(() => {
+    if (!currentPeriod) return crossTrackEvents;
+    // When drilled in, don't show cross-track events (they're at the top level)
+    return [];
+  }, [currentPeriod, crossTrackEvents]);
+
+  const pixelsPerYear = BASE_PX_PER_YEAR * zoom;
+  const totalWidth = (effectiveMasterRange.end - effectiveMasterRange.start) * pixelsPerYear;
 
   // Zoom via scroll wheel (also track scrolling state)
   useEffect(() => {
@@ -138,14 +145,12 @@ export default function TimelineView() {
   const handleMouseMove = useCallback((e) => {
     if (!isDragging) return;
     const dx = e.clientX - dragStart.x;
-    // Lower threshold means any movement counts as drag
     if (Math.abs(dx) > 3) hasDraggedRef.current = true;
     if (scrollRef.current) scrollRef.current.scrollLeft = dragStart.scrollLeft - dx;
   }, [isDragging, dragStart, scrollRef]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-    // Reset drag flag after a short delay so click events can check it first
     setTimeout(() => {
       hasDraggedRef.current = false;
     }, 50);
@@ -156,300 +161,256 @@ export default function TimelineView() {
     return () => window.removeEventListener('mouseup', handleMouseUp);
   }, [handleMouseUp]);
 
-  // Click on axis to add event
-  const handleAxisClick = useCallback((e) => {
-    // Don't trigger add-event if user was dragging or scrolling
+  // Click on track axis to add event
+  const handleTrackAxisClick = useCallback((e, track, axisRef) => {
     if (hasDraggedRef.current || isScrollingRef.current) return;
     e.stopPropagation();
-    const rect = axisRef.current?.getBoundingClientRect();
-    if (!rect || !effectiveDisplayMeta) return;
-    const clickX = e.clientX - rect.left - 20;
-    const year = positionToYear(clickX, effectiveDisplayMeta.startYear, pixelsPerYear);
-    setAddEventYear(year);
-    const currentNav = navStack.length > 0 ? navStack[navStack.length - 1] : null;
-    setAddEventParentId(currentNav?.parentEventId || null);
-  }, [effectiveDisplayMeta, pixelsPerYear, navStack]);
+    const rect = axisRef?.getBoundingClientRect();
+    if (!rect) return;
+    const clickX = e.clientX - rect.left;
+    
+    // Determine if we're in a cross-track period context
+    const isParentCrossTrack = currentPeriod?.periodEvent?.trackId === null;
+    
+    if (isParentCrossTrack) {
+      // Cross-track period: sub-events must also be cross-track, use master year
+      const masterYear = positionToMasterYear(clickX, effectiveMasterRange, pixelsPerYear);
+      setAddEventState({ 
+        crossTrack: true,
+        masterYear: masterYear,
+        parentPeriodId: currentPeriod?.periodEvent?.id,
+        forceCrossTrack: true, // Signal that this cannot be changed
+      });
+    } else {
+      // Track-specific period or top-level: use local year
+      const localYear = positionToLocalYear(clickX, track, effectiveMasterRange, pixelsPerYear);
+      setAddEventState({ 
+        trackId: track.id, 
+        year: localYear,
+        parentPeriodId: currentPeriod?.periodEvent?.id || null,
+      });
+    }
+  }, [effectiveMasterRange, pixelsPerYear, currentPeriod]);
 
-  if (!meta || !effectiveDisplayMeta) return null;
-
-  const axisTop = MARKER_AREA_HEIGHT + 20;
-
-  // Render a single event marker
-  const renderMarker = (evt, pos, isAbove, isContext = false) => {
-    const isExpanded = expandedEvent === evt.id;
-    const isPeriod = evt.type === 'period';
-    const hasImage = !!evt.image;
-    const opacity = isContext ? 'opacity-30 hover:opacity-50' : 'opacity-100';
-
+  if (!timelineMeta || !allTracks.length) {
     return (
-      <div
-        key={evt.id}
-        data-interactive="true"
-        className={`absolute transition-opacity duration-300 ${opacity}`}
-        style={{
-          left: pos.x + TIMELINE_PADDING,
-          top: axisTop,
-          transform: 'translateX(-50%)',
-          zIndex: isContext ? 5 : 10,
-        }}
-      >
-        {/* Connector line */}
-        <div
-          className={`absolute left-1/2 -translate-x-1/2 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/40' : 'bg-scifi-border/30'} ${pos.isFuzzy ? 'opacity-50' : ''}`}
-          style={isAbove ? { bottom: 0, height: hasImage ? 90 : 60 } : { top: 0, height: hasImage ? 90 : 60 }}
-        />
-
-        {/* Marker dot */}
-        <button
-          data-testid={`event-marker-${evt.id}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isContext) return;
-            setExpandedEvent(isExpanded ? null : evt.id);
-          }}
-          className={`
-            relative z-20 transition-all duration-200
-            ${pos.isFuzzy ? 'fuzzy-marker' : ''}
-            ${theme === 'fantasy'
-              ? `w-3 h-3 rounded-full border-2 hover:scale-[1.8] ${isPeriod ? 'bg-fantasy-accent-red border-fantasy-accent' : pos.isFuzzy ? 'bg-fantasy-muted/60 border-dashed border-fantasy-border' : 'bg-fantasy-accent border-fantasy-border'}`
-              : `w-3 h-3 rotate-45 border shadow-[0_0_8px_#00f3ff] hover:bg-cyan-400 hover:shadow-[0_0_15px_#00f3ff] ${isPeriod ? 'bg-purple-900 border-purple-400' : pos.isFuzzy ? 'bg-scifi-muted border-dashed border-scifi-border' : 'bg-black border-cyan-400'}`
-            }
-            ${isExpanded ? (theme === 'fantasy' ? 'scale-[1.8] ring-2 ring-fantasy-accent/50' : 'scale-150 ring-1 ring-cyan-400/50') : ''}
-            ${isContext ? 'cursor-default' : 'cursor-pointer'}
-          `}
-          style={{ marginTop: -6 }}
-        />
-
-        {/* Thumbnail + label */}
-        <div
-          className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
-          style={isAbove ? { bottom: 16, marginBottom: hasImage ? 78 : 48 } : { top: 16, marginTop: hasImage ? 78 : 48 }}
-        >
-          {hasImage && (
-            <div className={`event-thumbnail w-10 h-10 rounded-full overflow-hidden mb-1 ${theme === 'fantasy' ? 'ring-1 ring-fantasy-accent/30' : ''}`}>
-              <img src={evt.image} alt="" className={`w-full h-full object-cover ${theme === 'fantasy' ? 'brightness-90' : 'brightness-75 contrast-110'}`} loading="lazy" />
-            </div>
-          )}
-          <div className={`text-[11px] font-bold leading-tight max-w-[110px] text-center truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text text-[10px]'}`}>
-            {evt.title}
-          </div>
-          <div className={`text-[9px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'} ${pos.isFuzzy ? 'italic' : ''}`}>
-            {evt.type === 'point' ? formatYear(evt.date.year)
-              : evt.type === 'period' ? `${formatYear(evt.startDate.year)}–${formatYear(evt.endDate.year)}`
-              : '~ uncertain'}
-          </div>
-        </div>
+      <div className="flex items-center justify-center h-full">
+        <p className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+          No tracks defined. Add a track to get started.
+        </p>
       </div>
     );
-  };
+  }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className={`text-center py-4 px-6 flex-shrink-0 ${theme === 'fantasy' ? 'border-b border-fantasy-border/40 bg-fantasy-card/60' : 'border-b border-scifi-border/40 bg-scifi-bg-secondary/50'}`}>
-        <h1 data-testid="timeline-title" className={`text-2xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-lg tracking-widest'}`}>
-          {effectiveMeta?.title}
-        </h1>
-        <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-          {formatYear(effectiveMeta?.startYear)} — {formatYear(effectiveMeta?.endYear)}
-        </p>
-        {effectiveMeta?.description && (
-          <p className={`text-xs mt-1 max-w-2xl mx-auto ${theme === 'fantasy' ? 'text-fantasy-text/60 font-fantasy-body italic' : 'text-scifi-text/40 font-scifi-body'}`}>
-            {effectiveMeta.description}
-          </p>
-        )}
-      </div>
-
-      {/* Breadcrumbs (only when drilled in) */}
-      {breadcrumbs.length > 1 && (
-        <div
-          data-testid="breadcrumb-bar"
-          className={`flex items-center gap-1 px-4 py-2 text-xs flex-shrink-0 overflow-x-auto ${theme === 'fantasy' ? 'bg-fantasy-card/40 border-b border-fantasy-border/20' : 'bg-scifi-bg-secondary/40 border-b border-scifi-border/20'}`}
-        >
-          {breadcrumbs.map((crumb, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <ChevronRight size={12} className={theme === 'fantasy' ? 'text-fantasy-muted/40' : 'text-scifi-muted/30'} />}
+        <div className="flex items-center justify-center gap-4">
+          {/* Back button when drilled into a period */}
+          {currentPeriod && (
+            <button
+              data-testid="back-btn"
+              data-interactive="true"
+              onClick={() => setNavStack(prev => prev.slice(0, -1))}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border hover:text-fantasy-accent hover:border-fantasy-accent/50 font-fantasy-heading' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:text-scifi-accent hover:border-scifi-accent/50 font-scifi-heading'}`}
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
+          )}
+          
+          <div className="flex flex-col items-center">
+            <h1 data-testid="timeline-title" className={`text-2xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-lg tracking-widest'}`}>
+              {currentPeriod ? currentPeriod.periodEvent.title : timelineMeta.title}
+            </h1>
+            {/* Description - only show on main timeline, not when drilled in */}
+            {!currentPeriod && timelineMeta.description && (
+              <p data-testid="timeline-description" className={`text-sm mt-1 max-w-xl ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-body' : 'text-scifi-muted font-scifi-body'}`}>
+                {timelineMeta.description}
+              </p>
+            )}
+          </div>
+          
+          {/* Period date range indicator */}
+          {currentPeriod && (() => {
+            const pe = currentPeriod.periodEvent;
+            const track = allTracks.find(t => t.id === pe.trackId);
+            if (pe.trackId === null) {
+              // Cross-track period
+              return (
+                <span className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                  (Reference: {pe.masterStartDate.year} — {pe.masterEndDate.year})
+                </span>
+              );
+            } else if (track) {
+              return (
+                <span className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                  ({pe.startDate.year} — {pe.endDate.year} {track.abbr})
+                </span>
+              );
+            }
+            return null;
+          })()}
+          
+          {!currentPeriod && (
+            <>
               <button
-                data-testid={`breadcrumb-${i}`}
+                data-testid="edit-timeline-btn"
                 data-interactive="true"
-                onClick={() => navigateTo(crumb.level)}
-                className={`
-                  whitespace-nowrap transition-colors
-                  ${i === breadcrumbs.length - 1
-                    ? theme === 'fantasy' ? 'text-fantasy-accent font-bold font-fantasy-heading' : 'text-scifi-accent font-bold font-scifi-heading'
-                    : theme === 'fantasy' ? 'text-fantasy-muted hover:text-fantasy-accent font-fantasy-heading cursor-pointer' : 'text-scifi-muted hover:text-scifi-accent font-scifi-heading cursor-pointer'
-                  }
-                `}
+                onClick={() => setShowEditTimeline(true)}
+                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border hover:text-fantasy-accent hover:border-fantasy-accent/50 font-fantasy-heading' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:text-scifi-accent hover:border-scifi-accent/50 font-scifi-heading'}`}
               >
-                {crumb.label}
+                <Settings size={14} />
               </button>
-            </React.Fragment>
-          ))}
-        </div>
-      )}
-
-      {/* Sub-level header (when drilled in) */}
-      {!isRoot && meta && (
-        <div className={`text-center py-2 px-6 flex-shrink-0 ${theme === 'fantasy' ? 'bg-fantasy-bg-secondary/40' : 'bg-scifi-bg-secondary/30'}`}>
-          <h2 className={`text-lg font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-sm'}`}>
-            {meta.title}
-          </h2>
-          <p className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-            {formatYear(meta.startYear)} — {formatYear(meta.endYear)}
-          </p>
-          {meta.description && (
-            <p className={`text-[11px] mt-1 max-w-xl mx-auto ${theme === 'fantasy' ? 'text-fantasy-text/50 font-fantasy-body italic' : 'text-scifi-text/30 font-scifi-body'}`}>
-              {meta.description}
-            </p>
+              <button
+                data-testid="add-track-btn"
+                data-interactive="true"
+                onClick={() => setShowAddTrack(true)}
+                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/20 text-fantasy-accent border border-fantasy-accent/40 hover:bg-fantasy-accent/30 font-fantasy-heading' : 'bg-scifi-accent/20 text-scifi-accent border border-scifi-accent/40 hover:bg-scifi-accent/30 font-scifi-heading'}`}
+              >
+                <Plus size={14} /> Add Track
+              </button>
+            </>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Scrollable timeline area */}
-      <div
-        ref={scrollRef}
-        className={`flex-1 overflow-x-auto overflow-y-auto timeline-scroll ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
-      >
-        <div
-          ref={timelineAreaRef}
-          className="relative"
-          style={{
-            width: totalWidth + TIMELINE_PADDING * 2,
-            minHeight: MARKER_AREA_HEIGHT * 2 + 100,
-            paddingLeft: TIMELINE_PADDING,
-            paddingRight: TIMELINE_PADDING,
-          }}
+      {/* Main content area with fixed sidebar and scrollable timeline */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Fixed left sidebar with track names */}
+        <div 
+          className={`flex-shrink-0 w-48 overflow-y-auto ${theme === 'fantasy' ? 'bg-fantasy-card/80 border-r border-fantasy-border/30' : 'bg-scifi-bg-secondary/80 border-r border-scifi-border/30'}`}
+          style={{ paddingTop: 20 }}
         >
-          {/* Year markers */}
-          {yearMarkers.map(m => (
-            <div key={m.year} className="absolute flex flex-col items-center pointer-events-none" style={{ left: m.x + TIMELINE_PADDING, top: axisTop - 15, transform: 'translateX(-50%)' }}>
-              <div className={`h-8 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/30' : 'bg-scifi-border/25'}`} />
-              <span className={`text-[10px] mt-1 whitespace-nowrap select-none ${theme === 'fantasy' ? 'text-fantasy-muted/50 font-fantasy-body' : 'text-scifi-muted/40 font-scifi-body'}`}>
-                {formatYear(m.year)}
-              </span>
-            </div>
-          ))}
+          {currentPeriod ? (
+            <TrackLabel
+              track={currentPeriod.parentTrackId 
+                ? allTracks.find(t => t.id === currentPeriod.parentTrackId) 
+                : allTracks[0]}
+              trackIndex={0}
+              theme={theme}
+            />
+          ) : (
+            allTracks.map((track, trackIndex) => (
+              <TrackLabel
+                key={track.id}
+                track={track}
+                trackIndex={trackIndex}
+                theme={theme}
+              />
+            ))
+          )}
+        </div>
 
-          {/* AXIS LINE (clickable hitbox) */}
+        {/* Scrollable timeline area */}
+        <div
+          ref={scrollRef}
+          className={`flex-1 overflow-x-auto overflow-y-auto timeline-scroll ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
+        >
           <div
-            ref={axisRef}
-            data-testid="timeline-axis"
-            data-interactive="true"
-            className="absolute axis-hitbox"
-            style={{ top: axisTop - AXIS_HITBOX_HEIGHT / 2, height: AXIS_HITBOX_HEIGHT, left: TIMELINE_PADDING - 20, right: TIMELINE_PADDING - 20 }}
-            onClick={handleAxisClick}
-            title="Click to add event"
+            ref={timelineAreaRef}
+            className="relative"
+            style={{
+              width: totalWidth + TIMELINE_PADDING,
+              minHeight: currentPeriod 
+                ? TRACK_HEIGHT + 100
+                : allTracks.length * TRACK_HEIGHT + 100,
+            }}
           >
-            <div className={`absolute left-0 right-0 ${theme === 'fantasy' ? 'h-[3px] bg-gradient-to-r from-transparent via-fantasy-accent/60 to-transparent' : 'h-[2px] bg-cyan-500/80 shadow-[0_0_10px_#00f3ff]'}`} style={{ top: '50%', transform: 'translateY(-50%)' }} />
-          </div>
-
-          {/* FIX #1: Period boundary markers when in drilled-in view */}
-          {!isRoot && meta && effectiveDisplayMeta && (() => {
-            const startX = (meta.startYear - effectiveDisplayMeta.startYear) * pixelsPerYear + TIMELINE_PADDING;
-            const endX = (meta.endYear - effectiveDisplayMeta.startYear) * pixelsPerYear + TIMELINE_PADDING;
-            const regionWidth = endX - startX;
-            return (
+            {/* When drilled into a period, show single track with children */}
+            {currentPeriod ? (
+              <TrackRow
+                key={`drilled-${currentPeriod.periodEvent.id}`}
+                track={currentPeriod.parentTrackId 
+                  ? allTracks.find(t => t.id === currentPeriod.parentTrackId) 
+                  : allTracks[0]}
+                trackIndex={0}
+                events={displayEvents}
+                masterRange={effectiveMasterRange}
+                pixelsPerYear={pixelsPerYear}
+                totalWidth={totalWidth}
+                expandedEvent={expandedEvent}
+                setExpandedEvent={setExpandedEvent}
+                onAxisClick={handleTrackAxisClick}
+                theme={theme}
+                periodContext={currentPeriod.periodEvent}
+                showHeader={false}
+              />
+            ) : (
               <>
-                {/* Shaded region for the period */}
-                <div
-                  data-testid="period-region"
-                  className={`absolute pointer-events-none ${theme === 'fantasy' ? 'bg-fantasy-accent/[0.04]' : 'bg-cyan-500/[0.03]'}`}
-                  style={{ left: startX, width: regionWidth, top: 0, bottom: 0 }}
-                />
-                {/* Start boundary line */}
-                <div
-                  className={`absolute pointer-events-none ${theme === 'fantasy' ? 'w-px bg-fantasy-accent/30' : 'w-px bg-cyan-500/20'}`}
-                  style={{ left: startX, top: 20, bottom: 20, borderLeft: theme === 'fantasy' ? '1px dashed rgba(201,168,76,0.3)' : '1px dashed rgba(0,243,255,0.2)' }}
-                />
-                {/* End boundary line */}
-                <div
-                  className={`absolute pointer-events-none ${theme === 'fantasy' ? 'w-px bg-fantasy-accent/30' : 'w-px bg-cyan-500/20'}`}
-                  style={{ left: endX, top: 20, bottom: 20, borderLeft: theme === 'fantasy' ? '1px dashed rgba(201,168,76,0.3)' : '1px dashed rgba(0,243,255,0.2)' }}
-                />
-                {/* Start year label */}
-                <div className={`absolute pointer-events-none text-[9px] ${theme === 'fantasy' ? 'text-fantasy-accent/40 font-fantasy-heading' : 'text-scifi-accent/30 font-scifi-heading'}`}
-                  style={{ left: startX + 4, top: 24 }}>
-                  {formatYear(meta.startYear)}
-                </div>
-                {/* End year label */}
-                <div className={`absolute pointer-events-none text-[9px] ${theme === 'fantasy' ? 'text-fantasy-accent/40 font-fantasy-heading' : 'text-scifi-accent/30 font-scifi-heading'}`}
-                  style={{ left: endX - 30, top: 24 }}>
-                  {formatYear(meta.endYear)}
-                </div>
+                {/* Render each track */}
+                {allTracks.map((track, trackIndex) => (
+                  <TrackRow
+                    key={track.id}
+                    track={track}
+                    trackIndex={trackIndex}
+                    events={displayEvents.filter(e => e.trackId === track.id)}
+                    masterRange={effectiveMasterRange}
+                    pixelsPerYear={pixelsPerYear}
+                    totalWidth={totalWidth}
+                    expandedEvent={expandedEvent}
+                    setExpandedEvent={setExpandedEvent}
+                    onAxisClick={handleTrackAxisClick}
+                    theme={theme}
+                    showHeader={false}
+                  />
+                ))}
+
+                {/* Cross-track events (vertical lines spanning all tracks) */}
+                {displayCrossTrackEvents.map(evt => (
+                  <CrossTrackEvent
+                    key={evt.id}
+                    event={evt}
+                    tracks={allTracks}
+                    masterRange={effectiveMasterRange}
+                    pixelsPerYear={pixelsPerYear}
+                    trackCount={allTracks.length}
+                    expandedEvent={expandedEvent}
+                    setExpandedEvent={setExpandedEvent}
+                    theme={theme}
+                  />
+                ))}
               </>
-            );
-          })()}
-
-          {/* Context period bars (dimmed) */}
-          {contextPeriodEvents.map(evt => {
-            const dims = getPeriodBarDimensions(evt, effectiveDisplayMeta.startYear, pixelsPerYear);
-            return (
-              <div key={`ctx-period-${evt.id}`} className={`absolute opacity-15 ${theme === 'fantasy' ? 'h-4 bg-fantasy-accent/20 border border-fantasy-border/20' : 'h-2 bg-cyan-900/20 border border-cyan-500/10'}`}
-                style={{ left: dims.left + TIMELINE_PADDING, width: Math.max(dims.width, 4), top: axisTop - (theme === 'fantasy' ? 8 : 4) }}
-              />
-            );
-          })}
-
-          {/* Main period bars (interactive — click to drill in) */}
-          {periodEvents.map(evt => {
-            const dims = getPeriodBarDimensions(evt, effectiveDisplayMeta.startYear, pixelsPerYear);
-            return (
-              <div
-                key={`period-${evt.id}`}
-                data-interactive="true"
-                data-testid={`period-bar-${evt.id}`}
-                className={`
-                  absolute period-bar transition-all cursor-pointer
-                  ${theme === 'fantasy'
-                    ? 'h-4 bg-fantasy-accent/10 border border-fantasy-border/40 hover:bg-fantasy-accent/25 hover:border-fantasy-accent/60'
-                    : 'h-2 bg-cyan-900/40 border border-cyan-500/20 hover:bg-cyan-500/30 hover:border-cyan-400/50'
-                  }
-                `}
-                style={{ left: dims.left + TIMELINE_PADDING, width: Math.max(dims.width, 4), top: axisTop - (theme === 'fantasy' ? 8 : 4) }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  drillInto(evt, events);
-                }}
-                title={`${evt.title} — Click to explore`}
-              />
-            );
-          })}
-
-          {/* Context event markers (dimmed) */}
-          {sortedContextEvents.map(evt => {
-            const pos = positions[evt.id];
-            if (!pos) return null;
-            return renderMarker(evt, pos, evt.above, true);
-          })}
-
-          {/* Main event markers */}
-          {sortedEvents.map(evt => {
-            const pos = positions[evt.id];
-            if (!pos) return null;
-            return renderMarker(evt, pos, evt.above, false);
-          })}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Event Card Modal (centered overlay) */}
+      {/* Event Card Modal */}
       <AnimatePresence>
         {expandedEvent && (() => {
-          const evt = allDisplayEvents.find(e => e.id === expandedEvent);
+          // Search in both allEvents and displayEvents (for sub-events when drilled in)
+          let evt = allEvents.find(e => e.id === expandedEvent);
+          if (!evt && currentPeriod) {
+            // Also search in the period's children (use findEventById for deep search)
+            evt = findEventById(allEvents, expandedEvent);
+          }
+          if (!evt) {
+            // Last resort: search in displayEvents directly
+            evt = displayEvents.find(e => e.id === expandedEvent);
+          }
           if (!evt) return null;
+          
+          // Drill-in handler for period events - always allow drilling in
+          const handleDrillIn = evt.type === 'period' ? () => {
+            // Push to navigation stack with just the ID (not the full object)
+            setNavStack(prev => [...prev, { 
+              periodEventId: evt.id, 
+              parentTrackId: evt.trackId 
+            }]);
+            setExpandedEvent(null);
+          } : null;
+          
           return (
             <EventCard
               key={expandedEvent}
               event={evt}
+              tracks={allTracks}
               onClose={() => setExpandedEvent(null)}
-              onUpdate={(updates) => updateEvent(evt.id, updates)}
-              onDelete={() => deleteEvent(evt.id)}
-              onDrillIn={evt.type === 'period'
-                ? () => { drillInto(evt, events); setExpandedEvent(null); }
-                : null
-              }
+              onDrillIn={handleDrillIn}
             />
           );
         })()}
@@ -457,14 +418,356 @@ export default function TimelineView() {
 
       {/* Add Event Form Modal */}
       <AnimatePresence>
-        {addEventYear !== null && (
+        {addEventState && (
           <AddEventForm
-            year={addEventYear}
-            parentEventId={addEventParentId}
-            onClose={() => { setAddEventYear(null); setAddEventParentId(null); }}
+            trackId={addEventState.trackId}
+            year={addEventState.year}
+            crossTrack={addEventState.crossTrack}
+            masterYear={addEventState.masterYear}
+            parentPeriodId={addEventState.parentPeriodId}
+            forceCrossTrack={addEventState.forceCrossTrack}
+            onClose={() => setAddEventState(null)}
           />
         )}
       </AnimatePresence>
+
+      {/* Add Track Form Modal */}
+      <AnimatePresence>
+        {showAddTrack && (
+          <AddTrackForm onClose={() => setShowAddTrack(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Edit Timeline Form Modal */}
+      <AnimatePresence>
+        {showEditTimeline && (
+          <EditTimelineForm onClose={() => setShowEditTimeline(false)} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Track label component for the fixed sidebar
+function TrackLabel({ track, trackIndex, theme }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-2"
+      style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 20 }}
+    >
+      <div
+        className="w-4 h-4 rounded-sm flex-shrink-0"
+        style={{ backgroundColor: track.color }}
+      />
+      <div className="flex flex-col min-w-0">
+        <span className={`text-sm font-bold truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+          {track.name}
+        </span>
+        <span className={`text-xs truncate ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+          {track.calendarName}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Track row component
+function TrackRow({
+  track,
+  trackIndex,
+  events,
+  masterRange,
+  pixelsPerYear,
+  totalWidth,
+  expandedEvent,
+  setExpandedEvent,
+  onAxisClick,
+  theme,
+  showHeader = true,
+}) {
+  const axisRef = useRef(null);
+  const topOffset = trackIndex * TRACK_HEIGHT + 20;
+  const axisY = topOffset + AXIS_OFFSET;
+
+  // Generate year markers for this track
+  const yearMarkers = useMemo(() => {
+    return generateTrackYearMarkers(track, masterRange, pixelsPerYear);
+  }, [track, masterRange, pixelsPerYear]);
+
+  // Calculate track's visible range in master coordinates
+  const trackMasterStart = localToMaster(track.startYear, track);
+  const trackMasterEnd = localToMaster(track.endYear, track);
+  const trackStartX = Math.max(0, (trackMasterStart - masterRange.start) * pixelsPerYear);
+  const trackEndX = Math.min(totalWidth, (trackMasterEnd - masterRange.start) * pixelsPerYear);
+
+  // Sort events by position for alternating placement
+  const sortedEvents = useMemo(() => {
+    return [...events]
+      .filter(e => e.type === 'point' || e.type === 'period')
+      .sort((a, b) => {
+        // Handle both track-specific and cross-track events
+        const getYear = (e) => {
+          if (e.trackId === null) {
+            // Cross-track event
+            return e.type === 'point' ? e.masterDate?.year : e.masterStartDate?.year;
+          } else {
+            // Track-specific event
+            return e.type === 'point' ? e.date?.year : e.startDate?.year;
+          }
+        };
+        const aYear = getYear(a) || 0;
+        const bYear = getYear(b) || 0;
+        return aYear - bYear;
+      })
+      .map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
+  }, [events]);
+
+  const periodEvents = sortedEvents.filter(e => e.type === 'period');
+
+  return (
+    <div
+      className="absolute"
+      style={{ top: topOffset, left: 20, right: 20, height: TRACK_HEIGHT }}
+    >
+      {/* Track header - only show if showHeader is true */}
+      {showHeader && (
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className="w-3 h-3 rounded-sm"
+            style={{ backgroundColor: track.color }}
+          />
+          <span className={`text-sm font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+            {track.name}
+          </span>
+          <span className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+            ({track.calendarName})
+          </span>
+        </div>
+      )}
+
+      {/* Year markers */}
+      {yearMarkers.map(m => (
+        <div
+          key={m.localYear}
+          className="absolute flex flex-col items-center pointer-events-none"
+          style={{ left: m.x, top: AXIS_OFFSET - 20 }}
+        >
+          <div className={`h-5 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/30' : 'bg-scifi-border/25'}`} />
+          <span className={`text-[9px] mt-0.5 whitespace-nowrap select-none ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted/50'}`}>
+            {formatYear(m.localYear)} {track.abbr}
+          </span>
+        </div>
+      ))}
+
+      {/* Axis line - larger click area for better UX */}
+      <div
+        ref={axisRef}
+        data-testid={`track-axis-${track.id}`}
+        data-interactive="true"
+        className="absolute h-10 cursor-pointer"
+        style={{
+          top: AXIS_OFFSET - 20,
+          left: trackStartX,
+          width: trackEndX - trackStartX,
+        }}
+        onClick={(e) => onAxisClick(e, track, axisRef.current)}
+        title="Click to add event"
+      >
+        <div
+          className="absolute left-0 right-0 h-[3px] top-1/2 -translate-y-1/2"
+          style={{
+            background: theme === 'fantasy'
+              ? `linear-gradient(90deg, transparent, ${track.color}80, ${track.color}, ${track.color}80, transparent)`
+              : track.color,
+            boxShadow: theme === 'scifi' ? `0 0 8px ${track.color}` : 'none',
+          }}
+        />
+      </div>
+
+      {/* Period bars */}
+      {periodEvents.map(evt => {
+        const dims = getTrackPeriodBarDimensions(evt, track, masterRange, pixelsPerYear);
+        return (
+          <div
+            key={`period-${evt.id}`}
+            data-interactive="true"
+            data-testid={`period-bar-${evt.id}`}
+            className="absolute cursor-pointer transition-all"
+            style={{
+              left: dims.left,
+              width: Math.max(dims.width, 4),
+              top: AXIS_OFFSET - 8,
+              height: 16,
+              backgroundColor: `${track.color}25`,
+              borderLeft: `2px solid ${track.color}`,
+              borderRight: `2px solid ${track.color}`,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpandedEvent(evt.id);
+            }}
+            title={evt.title}
+          />
+        );
+      })}
+
+      {/* Event markers */}
+      {sortedEvents.map(evt => {
+        // Handle both track-specific and cross-track events
+        const isCrossTrackEvent = evt.trackId === null;
+        let year, masterYear;
+        
+        if (isCrossTrackEvent) {
+          // Cross-track event uses masterDate/masterStartDate
+          masterYear = evt.type === 'point' ? evt.masterDate?.year : evt.masterStartDate?.year;
+          year = masterToLocal(masterYear, track); // Convert to local for display
+        } else {
+          // Track-specific event uses date/startDate
+          year = evt.type === 'point' ? evt.date?.year : evt.startDate?.year;
+          masterYear = localToMaster(year, track);
+        }
+        
+        if (masterYear === undefined) return null; // Skip invalid events
+        
+        const x = (masterYear - masterRange.start) * pixelsPerYear;
+        const isExpanded = expandedEvent === evt.id;
+        const hasImage = !!evt.image;
+
+        return (
+          <div
+            key={evt.id}
+            data-interactive="true"
+            className="absolute transition-all"
+            style={{
+              left: x,
+              top: AXIS_OFFSET,
+              transform: 'translateX(-50%)',
+              zIndex: isExpanded ? 20 : 10,
+            }}
+          >
+            {/* Connector line */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 w-px"
+              style={{
+                backgroundColor: `${track.color}50`,
+                ...(evt.above
+                  ? { bottom: 0, height: hasImage ? 70 : 50 }
+                  : { top: 0, height: hasImage ? 70 : 50 }
+                ),
+              }}
+            />
+
+            {/* Marker dot */}
+            <button
+              data-testid={`event-marker-${evt.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpandedEvent(isExpanded ? null : evt.id);
+              }}
+              className={`relative z-20 transition-all duration-200 ${theme === 'fantasy' ? 'w-3 h-3 rounded-full border-2 hover:scale-150' : 'w-3 h-3 rotate-45 border hover:scale-150'}`}
+              style={{
+                backgroundColor: evt.type === 'period' ? track.color : (theme === 'fantasy' ? track.color : '#050510'),
+                borderColor: track.color,
+                boxShadow: theme === 'scifi' ? `0 0 8px ${track.color}` : 'none',
+                marginTop: -6,
+                transform: isExpanded ? 'scale(1.5)' : undefined,
+              }}
+            />
+
+            {/* Thumbnail + label */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
+              style={evt.above ? { bottom: 16, marginBottom: hasImage ? 58 : 38 } : { top: 16, marginTop: hasImage ? 58 : 38 }}
+            >
+              {hasImage && (
+                <div
+                  className="w-8 h-8 rounded-full overflow-hidden mb-1"
+                  style={{ border: `2px solid ${track.color}40` }}
+                >
+                  <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                </div>
+              )}
+              <div className={`text-[10px] font-bold leading-tight max-w-[100px] text-center truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+                {evt.title}
+              </div>
+              <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                {formatYear(year)} {track.abbr}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Cross-track event component (vertical line/band spanning all tracks)
+function CrossTrackEvent({
+  event,
+  tracks,
+  masterRange,
+  pixelsPerYear,
+  trackCount,
+  expandedEvent,
+  setExpandedEvent,
+  theme,
+}) {
+  const isPeriod = event.type === 'period';
+  const masterYear = isPeriod ? event.masterStartDate.year : event.masterDate.year;
+  const x = (masterYear - masterRange.start) * pixelsPerYear + 20; // Reduced padding since sidebar handles it
+  
+  let width = 4;
+  if (isPeriod) {
+    width = Math.max((event.masterEndDate.year - event.masterStartDate.year) * pixelsPerYear, 4);
+  }
+
+  const totalHeight = trackCount * TRACK_HEIGHT;
+  const isExpanded = expandedEvent === event.id;
+
+  // Cross-track event color (neutral/accent)
+  const crossTrackColor = theme === 'fantasy' ? '#8a0303' : '#ff00ff';
+
+  return (
+    <div
+      data-interactive="true"
+      data-testid={`cross-track-${event.id}`}
+      className="absolute cursor-pointer transition-all group"
+      style={{
+        left: x,
+        top: 40,
+        width: isPeriod ? width : 3,
+        height: totalHeight - 20,
+        zIndex: isExpanded ? 25 : 2, // Lower z-index to avoid blocking track events
+        pointerEvents: 'auto',
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        setExpandedEvent(isExpanded ? null : event.id);
+      }}
+    >
+      {/* Vertical line or band */}
+      <div
+        className="absolute inset-0 transition-all pointer-events-none"
+        style={{
+          backgroundColor: isPeriod ? `${crossTrackColor}15` : crossTrackColor,
+          borderLeft: `2px solid ${crossTrackColor}`,
+          borderRight: isPeriod ? `2px solid ${crossTrackColor}` : 'none',
+          boxShadow: theme === 'scifi' ? `0 0 10px ${crossTrackColor}` : 'none',
+        }}
+      />
+
+      {/* Label */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap transition-all pointer-events-auto"
+        style={{ top: -25 }}
+      >
+        <div
+          className={`px-2 py-1 text-[10px] font-bold text-center ${theme === 'fantasy' ? 'font-fantasy-heading bg-fantasy-card border border-fantasy-border' : 'font-scifi-heading bg-scifi-bg-secondary border border-scifi-border'}`}
+          style={{ color: crossTrackColor }}
+        >
+          {event.title}
+        </div>
+      </div>
     </div>
   );
 }

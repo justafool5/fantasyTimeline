@@ -2,15 +2,11 @@
   "timelines": [
     {
       "id": "ages-of-eldoria",
-      "title": "Ages of Eldoria",
-      "description": "The complete history of the realm of Eldoria, from the Sundering to the Age of Restoration",
       "url": "data/ages-of-eldoria.json",
       "defaultTheme": "fantasy"
     },
     {
       "id": "galactic-chronicles",
-      "title": "Galactic Chronicles",
-      "description": "The rise and fall of civilizations across the known galaxy",
       "url": "data/galactic-chronicles.json",
       "defaultTheme": "scifi"
     }
