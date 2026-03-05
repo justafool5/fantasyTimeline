@@ -237,77 +237,107 @@ export default function TimelineView() {
         </div>
       </div>
 
-      {/* Scrollable timeline area */}
-      <div
-        ref={scrollRef}
-        className={`flex-1 overflow-auto timeline-scroll ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
-      >
-        <div
-          ref={timelineAreaRef}
-          className="relative"
-          style={{
-            width: totalWidth + TIMELINE_PADDING * 2,
-            minHeight: currentPeriod 
-              ? TRACK_HEIGHT + 100  // Single track view when drilled in
-              : allTracks.length * TRACK_HEIGHT + 100,
-          }}
+      {/* Main content area with fixed sidebar and scrollable timeline */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Fixed left sidebar with track names */}
+        <div 
+          className={`flex-shrink-0 w-48 overflow-y-auto ${theme === 'fantasy' ? 'bg-fantasy-card/80 border-r border-fantasy-border/30' : 'bg-scifi-bg-secondary/80 border-r border-scifi-border/30'}`}
+          style={{ paddingTop: 20 }}
         >
-          {/* When drilled into a period, show single track with children */}
           {currentPeriod ? (
-            <TrackRow
-              key={`drilled-${currentPeriod.periodEvent.id}`}
+            <TrackLabel
               track={currentPeriod.parentTrackId 
                 ? allTracks.find(t => t.id === currentPeriod.parentTrackId) 
-                : allTracks[0]} // Fallback for cross-track periods
+                : allTracks[0]}
               trackIndex={0}
-              events={displayEvents}
-              masterRange={effectiveMasterRange}
-              pixelsPerYear={pixelsPerYear}
-              totalWidth={totalWidth}
-              expandedEvent={expandedEvent}
-              setExpandedEvent={setExpandedEvent}
-              onAxisClick={handleTrackAxisClick}
               theme={theme}
-              periodContext={currentPeriod.periodEvent}
             />
           ) : (
-            <>
-              {/* Render each track */}
-              {allTracks.map((track, trackIndex) => (
-                <TrackRow
-                  key={track.id}
-                  track={track}
-                  trackIndex={trackIndex}
-                  events={displayEvents.filter(e => e.trackId === track.id)}
-                  masterRange={effectiveMasterRange}
-                  pixelsPerYear={pixelsPerYear}
-                  totalWidth={totalWidth}
-                  expandedEvent={expandedEvent}
-                  setExpandedEvent={setExpandedEvent}
-                  onAxisClick={handleTrackAxisClick}
-                  theme={theme}
-                />
-              ))}
-
-              {/* Cross-track events (vertical lines spanning all tracks) */}
-              {displayCrossTrackEvents.map(evt => (
-                <CrossTrackEvent
-                  key={evt.id}
-                  event={evt}
-                  tracks={allTracks}
-                  masterRange={effectiveMasterRange}
-                  pixelsPerYear={pixelsPerYear}
-                  trackCount={allTracks.length}
-                  expandedEvent={expandedEvent}
-                  setExpandedEvent={setExpandedEvent}
-                  theme={theme}
-                />
-              ))}
-            </>
+            allTracks.map((track, trackIndex) => (
+              <TrackLabel
+                key={track.id}
+                track={track}
+                trackIndex={trackIndex}
+                theme={theme}
+              />
+            ))
           )}
+        </div>
+
+        {/* Scrollable timeline area */}
+        <div
+          ref={scrollRef}
+          className={`flex-1 overflow-x-auto overflow-y-auto timeline-scroll ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          style={{ scrollBehavior: isDragging ? 'auto' : 'smooth' }}
+        >
+          <div
+            ref={timelineAreaRef}
+            className="relative"
+            style={{
+              width: totalWidth + TIMELINE_PADDING,
+              minHeight: currentPeriod 
+                ? TRACK_HEIGHT + 100
+                : allTracks.length * TRACK_HEIGHT + 100,
+            }}
+          >
+            {/* When drilled into a period, show single track with children */}
+            {currentPeriod ? (
+              <TrackRow
+                key={`drilled-${currentPeriod.periodEvent.id}`}
+                track={currentPeriod.parentTrackId 
+                  ? allTracks.find(t => t.id === currentPeriod.parentTrackId) 
+                  : allTracks[0]}
+                trackIndex={0}
+                events={displayEvents}
+                masterRange={effectiveMasterRange}
+                pixelsPerYear={pixelsPerYear}
+                totalWidth={totalWidth}
+                expandedEvent={expandedEvent}
+                setExpandedEvent={setExpandedEvent}
+                onAxisClick={handleTrackAxisClick}
+                theme={theme}
+                periodContext={currentPeriod.periodEvent}
+                showHeader={false}
+              />
+            ) : (
+              <>
+                {/* Render each track */}
+                {allTracks.map((track, trackIndex) => (
+                  <TrackRow
+                    key={track.id}
+                    track={track}
+                    trackIndex={trackIndex}
+                    events={displayEvents.filter(e => e.trackId === track.id)}
+                    masterRange={effectiveMasterRange}
+                    pixelsPerYear={pixelsPerYear}
+                    totalWidth={totalWidth}
+                    expandedEvent={expandedEvent}
+                    setExpandedEvent={setExpandedEvent}
+                    onAxisClick={handleTrackAxisClick}
+                    theme={theme}
+                    showHeader={false}
+                  />
+                ))}
+
+                {/* Cross-track events (vertical lines spanning all tracks) */}
+                {displayCrossTrackEvents.map(evt => (
+                  <CrossTrackEvent
+                    key={evt.id}
+                    event={evt}
+                    tracks={allTracks}
+                    masterRange={effectiveMasterRange}
+                    pixelsPerYear={pixelsPerYear}
+                    trackCount={allTracks.length}
+                    expandedEvent={expandedEvent}
+                    setExpandedEvent={setExpandedEvent}
+                    theme={theme}
+                  />
+                ))}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -369,6 +399,29 @@ export default function TimelineView() {
   );
 }
 
+// Track label component for the fixed sidebar
+function TrackLabel({ track, trackIndex, theme }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-2"
+      style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 20 }}
+    >
+      <div
+        className="w-4 h-4 rounded-sm flex-shrink-0"
+        style={{ backgroundColor: track.color }}
+      />
+      <div className="flex flex-col min-w-0">
+        <span className={`text-sm font-bold truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+          {track.name}
+        </span>
+        <span className={`text-xs truncate ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+          {track.calendarName}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // Track row component
 function TrackRow({
   track,
@@ -381,6 +434,7 @@ function TrackRow({
   setExpandedEvent,
   onAxisClick,
   theme,
+  showHeader = true,
 }) {
   const axisRef = useRef(null);
   const topOffset = trackIndex * TRACK_HEIGHT + 20;
@@ -424,21 +478,23 @@ function TrackRow({
   return (
     <div
       className="absolute"
-      style={{ top: topOffset, left: TIMELINE_PADDING, right: TIMELINE_PADDING, height: TRACK_HEIGHT }}
+      style={{ top: topOffset, left: 20, right: 20, height: TRACK_HEIGHT }}
     >
-      {/* Track header */}
-      <div className="flex items-center gap-2 mb-2">
-        <div
-          className="w-3 h-3 rounded-sm"
-          style={{ backgroundColor: track.color }}
-        />
-        <span className={`text-sm font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
-          {track.name}
-        </span>
-        <span className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-          ({track.calendarName})
-        </span>
-      </div>
+      {/* Track header - only show if showHeader is true */}
+      {showHeader && (
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className="w-3 h-3 rounded-sm"
+            style={{ backgroundColor: track.color }}
+          />
+          <span className={`text-sm font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+            {track.name}
+          </span>
+          <span className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+            ({track.calendarName})
+          </span>
+        </div>
+      )}
 
       {/* Year markers */}
       {yearMarkers.map(m => (
@@ -609,7 +665,7 @@ function CrossTrackEvent({
 }) {
   const isPeriod = event.type === 'period';
   const masterYear = isPeriod ? event.masterStartDate.year : event.masterDate.year;
-  const x = (masterYear - masterRange.start) * pixelsPerYear + TIMELINE_PADDING;
+  const x = (masterYear - masterRange.start) * pixelsPerYear + 20; // Reduced padding since sidebar handles it
   
   let width = 4;
   if (isPeriod) {
