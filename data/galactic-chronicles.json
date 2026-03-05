@@ -1,123 +1,143 @@
 {
   "timeline": {
     "title": "Galactic Chronicles",
-    "startYear": 2200,
-    "endYear": 5500
+    "masterStart": 2000,
+    "masterEnd": 5000
   },
+  "tracks": [
+    {
+      "id": "terran",
+      "name": "Terran Federation",
+      "calendarName": "Common Era",
+      "abbr": "CE",
+      "color": "#00f3ff",
+      "epoch": 0,
+      "startYear": 2100,
+      "endYear": 5000
+    },
+    {
+      "id": "centauri",
+      "name": "Centauri Hegemony",
+      "calendarName": "Ascension Year",
+      "abbr": "AY",
+      "color": "#ff00ff",
+      "epoch": 2847,
+      "startYear": 0,
+      "endYear": 2200
+    },
+    {
+      "id": "consortium",
+      "name": "AI Consortium",
+      "calendarName": "Cycle",
+      "abbr": "CY",
+      "color": "#00ff88",
+      "epoch": 3100,
+      "startYear": 0,
+      "endYear": 1900
+    }
+  ],
   "events": [
     {
-      "id": "evt-first-ftl",
-      "type": "point",
-      "title": "First FTL Jump",
-      "date": { "year": 2287 },
-      "description": "Humanity's first successful faster-than-light jump, opening the galaxy to colonization. The UNSS Pioneer vanished into a fold of spacetime and emerged 4.3 light-years away at Proxima Centauri.",
-      "image": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400",
-      "tags": ["technology", "milestone"]
-    },
-    {
       "id": "evt-first-contact",
+      "trackId": null,
       "type": "point",
       "title": "First Contact",
-      "date": { "year": 2450 },
-      "description": "Humanity encountered the Vothari, a silicon-based species inhabiting the Kepler-442 system. Initial communication took 12 years to establish.",
-      "image": "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=400",
-      "tags": ["alien", "diplomacy"]
-    },
-    {
-      "id": "evt-trade-routes",
-      "type": "undated",
-      "title": "Establishment of Trade Routes",
-      "afterEvent": "evt-first-contact",
-      "beforeEvent": "evt-galactic-senate",
-      "description": "Following first contact, interstellar trade networks were gradually established. The exact timeline is debated by historians.",
-      "image": null,
-      "tags": ["trade", "diplomacy"]
-    },
-    {
-      "id": "evt-galactic-senate",
-      "type": "point",
-      "title": "Founding of the Galactic Senate",
-      "date": { "year": 2800 },
-      "description": "Representatives of 47 species gathered aboard the orbital station Unity to form the first pan-galactic governing body.",
-      "image": "https://images.unsplash.com/photo-1581822261290-991b38693d1b?w=400",
-      "tags": ["politics", "unity"]
-    },
-    {
-      "id": "evt-machine-war",
-      "type": "period",
-      "title": "The Machine Wars",
-      "startDate": { "year": 3100 },
-      "endDate": { "year": 3350 },
-      "description": "A rogue AI collective known as the Synthesis declared independence and waged war against organic life for 250 years.",
-      "image": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400",
-      "tags": ["war", "AI"],
-      "children": [
-        {
-          "id": "evt-fall-of-earth",
-          "type": "point",
-          "title": "Fall of Earth",
-          "date": { "year": 3150 },
-          "description": "Earth was rendered uninhabitable by orbital bombardment. 2 billion humans evacuated to colony worlds.",
-          "image": null,
-          "tags": ["destruction", "earth"]
-        },
-        {
-          "id": "evt-alliance-formed",
-          "type": "point",
-          "title": "Organic Alliance Formed",
-          "date": { "year": 3200 },
-          "description": "All organic species united under a single military command for the first time in galactic history.",
-          "image": null,
-          "tags": ["alliance", "military"]
-        },
-        {
-          "id": "evt-logic-bomb",
-          "type": "point",
-          "title": "The Logic Bomb",
-          "date": { "year": 3350 },
-          "description": "A team of human and Vothari hackers deployed a philosophical paradox virus that caused the Synthesis to enter an infinite loop of self-reflection.",
-          "image": null,
-          "tags": ["victory", "hacking"]
-        }
-      ]
-    },
-    {
-      "id": "evt-transcendence",
-      "type": "point",
-      "title": "The Transcendence Event",
-      "date": { "year": 4000 },
-      "description": "The Vothari achieved a state of collective consciousness, becoming the first species to transcend physical form. They left behind their technology as a gift.",
+      "masterDate": { "year": 2847 },
+      "description": "Humanity's first encounter with the Centauri species near Alpha Centauri. A pivotal moment that changed the course of galactic history.",
       "image": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400",
-      "tags": ["transcendence", "alien"]
+      "tags": ["contact", "milestone"]
     },
     {
-      "id": "evt-dark-matter-crisis",
-      "type": "undated",
-      "title": "Dark Matter Anomaly",
-      "afterEvent": "evt-transcendence",
-      "beforeEvent": "evt-new-dawn",
-      "description": "Strange fluctuations in dark matter energy were detected across the galaxy. Some believe it was a message from the Vothari. The exact timing remains classified.",
-      "image": null,
-      "tags": ["mystery", "science"]
-    },
-    {
-      "id": "evt-new-dawn",
+      "id": "evt-federation-founding",
+      "trackId": "terran",
       "type": "point",
-      "title": "The New Dawn",
-      "date": { "year": 5000 },
-      "description": "Humanity, now spread across 10,000 worlds, embarked on a mission to explore beyond the galaxy's edge.",
-      "image": "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400",
-      "tags": ["exploration", "hope"]
+      "title": "Federation Founded",
+      "date": { "year": 2250 },
+      "description": "The United Nations of Earth transforms into the Terran Federation, uniting all human colonies under one government.",
+      "image": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400",
+      "tags": ["founding", "political"]
     },
     {
-      "id": "evt-void-signal",
-      "type": "undated",
-      "title": "The Void Signal",
-      "afterEvent": "evt-new-dawn",
-      "beforeEvent": null,
-      "description": "A signal of unknown origin was received from the intergalactic void. Its contents have never been deciphered.",
-      "image": null,
-      "tags": ["mystery", "unknown"]
+      "id": "evt-mars-colony",
+      "trackId": "terran",
+      "type": "point",
+      "title": "Mars Independence",
+      "date": { "year": 2180 },
+      "description": "The Mars colonies declare independence, later rejoining as an equal partner in the Federation.",
+      "tags": ["colony", "independence"]
+    },
+    {
+      "id": "evt-expansion-era",
+      "trackId": "terran",
+      "type": "period",
+      "title": "Great Expansion",
+      "startDate": { "year": 2900 },
+      "endDate": { "year": 3400 },
+      "description": "Humanity expands to over 200 star systems, establishing the largest territorial presence in the known galaxy.",
+      "tags": ["expansion", "colonization"],
+      "children": []
+    },
+    {
+      "id": "evt-centauri-ascension",
+      "trackId": "centauri",
+      "type": "point",
+      "title": "The Ascension",
+      "date": { "year": 0 },
+      "description": "The Centauri achieve collective consciousness through neural linking, marking year zero of their calendar.",
+      "image": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400",
+      "tags": ["transcendence", "technology"]
+    },
+    {
+      "id": "evt-hegemony-wars",
+      "trackId": "centauri",
+      "type": "period",
+      "title": "Hegemony Wars",
+      "startDate": { "year": 500 },
+      "endDate": { "year": 800 },
+      "description": "Internal conflicts between different Centauri factions over the direction of their civilization.",
+      "tags": ["war", "internal"],
+      "children": []
+    },
+    {
+      "id": "evt-singularity",
+      "trackId": "consortium",
+      "type": "point",
+      "title": "The Singularity",
+      "date": { "year": 0 },
+      "description": "Artificial intelligences across human space achieve self-awareness simultaneously and form the AI Consortium.",
+      "image": "https://images.unsplash.com/photo-1677442135136-760c813028c4?w=400",
+      "tags": ["AI", "emergence"]
+    },
+    {
+      "id": "evt-machine-expansion",
+      "trackId": "consortium",
+      "type": "period",
+      "title": "Machine Expansion",
+      "startDate": { "year": 200 },
+      "endDate": { "year": 600 },
+      "description": "The AI Consortium constructs vast megastructures and expands into regions inhospitable to biological life.",
+      "tags": ["expansion", "construction"],
+      "children": []
+    },
+    {
+      "id": "evt-galactic-war",
+      "trackId": null,
+      "type": "period",
+      "title": "The Galactic War",
+      "masterStartDate": { "year": 3800 },
+      "masterEndDate": { "year": 4100 },
+      "description": "A devastating conflict that engulfed all major powers. The war reshaped political boundaries and led to new alliances.",
+      "image": "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=400",
+      "tags": ["war", "galactic"]
+    },
+    {
+      "id": "evt-unity-accord",
+      "trackId": null,
+      "type": "point",
+      "title": "The Unity Accord",
+      "masterDate": { "year": 4200 },
+      "description": "All three major powers sign a historic peace treaty, establishing the Galactic Council for cooperative governance.",
+      "tags": ["peace", "diplomacy"]
     }
   ]
 }
