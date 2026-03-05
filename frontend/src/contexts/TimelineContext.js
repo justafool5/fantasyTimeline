@@ -47,9 +47,10 @@ export function TimelineProvider({ children }) {
   // Each entry: { events, meta: {title, startYear, endYear, description}, contextEvents, label }
   const [navStack, setNavStack] = useState([]);
 
-  // Load manifest
+  // Load manifest (with cache-busting)
   useEffect(() => {
-    fetch(`${process.env.PUBLIC_URL}/data/manifest.json`)
+    const cacheBuster = `?t=${Date.now()}`;
+    fetch(`${process.env.PUBLIC_URL}/data/manifest.json${cacheBuster}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         setManifest(data);
@@ -70,7 +71,8 @@ export function TimelineProvider({ children }) {
     setExpandedEvent(null);
     setNavStack([]);
 
-    fetch(`${process.env.PUBLIC_URL}/${entry.url}`)
+    const cacheBuster = `?t=${Date.now()}`;
+    fetch(`${process.env.PUBLIC_URL}/${entry.url}${cacheBuster}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         setTimelineData(data);

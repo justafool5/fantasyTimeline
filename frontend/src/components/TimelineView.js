@@ -27,6 +27,8 @@ export default function TimelineView() {
   const [addEventParentId, setAddEventParentId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const hasDraggedRef = useRef(false);
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef(null);
   const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
   const timelineAreaRef = useRef(null);
   const axisRef = useRef(null);
@@ -104,11 +106,18 @@ export default function TimelineView() {
       .map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
   }, [contextEvents, positions]);
 
-  // Zoom via scroll wheel
+  // Zoom via scroll wheel (also track scrolling state)
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const handler = (e) => {
+      // Mark that we're scrolling to prevent click-to-add
+      isScrollingRef.current = true;
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 150);
+
       if (e.shiftKey) return;
       e.preventDefault();
       const delta = e.deltaY > 0 ? 0.92 : 1.08;
@@ -129,7 +138,8 @@ export default function TimelineView() {
   const handleMouseMove = useCallback((e) => {
     if (!isDragging) return;
     const dx = e.clientX - dragStart.x;
-    if (Math.abs(dx) > 5) hasDraggedRef.current = true;
+    // Lower threshold means any movement counts as drag
+    if (Math.abs(dx) > 3) hasDraggedRef.current = true;
     if (scrollRef.current) scrollRef.current.scrollLeft = dragStart.scrollLeft - dx;
   }, [isDragging, dragStart, scrollRef]);
 
@@ -142,7 +152,8 @@ export default function TimelineView() {
 
   // Click on axis to add event
   const handleAxisClick = useCallback((e) => {
-    if (hasDraggedRef.current) return;
+    // Don't trigger add-event if user was dragging or scrolling
+    if (hasDraggedRef.current || isScrollingRef.current) return;
     e.stopPropagation();
     const rect = axisRef.current?.getBoundingClientRect();
     if (!rect || !effectiveDisplayMeta) return;
