@@ -5,12 +5,15 @@ import { motion } from 'framer-motion';
 import { X, Plus, Globe } from 'lucide-react';
 import { formatYear } from '../utils/timelineUtils';
 
-export default function AddEventForm({ trackId, year, crossTrack, masterYear, onClose }) {
+export default function AddEventForm({ trackId, year, crossTrack, masterYear, parentPeriodId, onClose }) {
   const { addEvent, allTracks } = useTimeline();
   const { theme } = useTheme();
 
   const initialTrack = trackId || (allTracks.length > 0 ? allTracks[0].id : null);
   const currentTrack = allTracks.find(t => t.id === initialTrack);
+  
+  // When adding to a period, disable cross-track option
+  const isAddingToParent = !!parentPeriodId;
 
   const [form, setForm] = useState({
     title: '',
@@ -23,7 +26,7 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, on
     image: '',
     tags: '',
     trackId: initialTrack,
-    isCrossTrack: crossTrack || false,
+    isCrossTrack: isAddingToParent ? false : (crossTrack || false),
   });
 
   const selectedTrack = allTracks.find(t => t.id === form.trackId);
@@ -61,7 +64,7 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, on
       }
     }
 
-    addEvent(event);
+    addEvent(event, parentPeriodId);
     onClose();
   };
 
@@ -119,27 +122,36 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, on
           />
         </div>
 
-        {/* Cross-Track Toggle */}
-        <div className="mb-4">
-          <label className={`flex items-center gap-3 cursor-pointer p-3 transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30 hover:border-fantasy-accent/50' : 'bg-scifi-bg/50 border border-scifi-border/30 hover:border-scifi-accent/50'}`}>
-            <input
-              type="checkbox"
-              data-testid="cross-track-checkbox"
-              checked={form.isCrossTrack}
-              onChange={e => setForm(f => ({ ...f, isCrossTrack: e.target.checked }))}
-              className="w-4 h-4"
-            />
-            <Globe size={16} className={form.isCrossTrack ? (theme === 'fantasy' ? 'text-fantasy-accent' : 'text-scifi-accent') : (theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted')} />
-            <div>
-              <span className={`text-sm font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
-                Cross-Track Event
-              </span>
-              <p className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
-                Spans all tracks (e.g., celestial events, cataclysms)
-              </p>
-            </div>
-          </label>
-        </div>
+        {/* Cross-Track Toggle - disabled when adding sub-events */}
+        {!isAddingToParent && (
+          <div className="mb-4">
+            <label className={`flex items-center gap-3 cursor-pointer p-3 transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30 hover:border-fantasy-accent/50' : 'bg-scifi-bg/50 border border-scifi-border/30 hover:border-scifi-accent/50'}`}>
+              <input
+                type="checkbox"
+                data-testid="cross-track-checkbox"
+                checked={form.isCrossTrack}
+                onChange={e => setForm(f => ({ ...f, isCrossTrack: e.target.checked }))}
+                className="w-4 h-4"
+              />
+              <Globe size={16} className={form.isCrossTrack ? (theme === 'fantasy' ? 'text-fantasy-accent' : 'text-scifi-accent') : (theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted')} />
+              <div>
+                <span className={`text-sm font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+                  Cross-Track Event
+                </span>
+                <p className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+                  Spans all tracks (e.g., celestial events, cataclysms)
+                </p>
+              </div>
+            </label>
+          </div>
+        )}
+        
+        {/* Show hint when adding sub-event */}
+        {isAddingToParent && (
+          <div className={`mb-4 p-3 text-sm ${theme === 'fantasy' ? 'bg-fantasy-accent/10 border border-fantasy-accent/30 text-fantasy-accent' : 'bg-scifi-accent/10 border border-scifi-accent/30 text-scifi-accent'}`}>
+            Adding sub-event to period
+          </div>
+        )}
 
         {/* Track Selection (if not cross-track) */}
         {!form.isCrossTrack && allTracks.length > 0 && (

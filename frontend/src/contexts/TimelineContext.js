@@ -142,16 +142,45 @@ export function TimelineProvider({ children }) {
     });
   }, [currentTimelineId]);
 
-  // Add a new event
-  const addEvent = useCallback((event) => {
+  // Add a new event (can be a child of a period)
+  const addEvent = useCallback((event, parentPeriodId = null) => {
     const newEvent = { ...event, id: `local-${Date.now()}`, isLocal: true };
-    setLocalEvents(prev => {
-      const next = [...prev, newEvent];
-      saveLocalEvents(currentTimelineId, next);
-      return next;
-    });
+    
+    if (parentPeriodId) {
+      // Add as a child to a period event
+      // First check local events
+      setLocalEvents(prev => {
+        const parentIdx = prev.findIndex(e => e.id === parentPeriodId);
+        if (parentIdx >= 0) {
+          const next = [...prev];
+          const parent = { ...next[parentIdx] };
+          parent.children = [...(parent.children || []), newEvent];
+          next[parentIdx] = parent;
+          saveLocalEvents(currentTimelineId, next);
+          return next;
+        }
+        return prev;
+      });
+      
+      // Also check JSON data
+      if (timelineData) {
+        const parentIdx = timelineData.events.findIndex(e => e.id === parentPeriodId);
+        if (parentIdx >= 0) {
+          const parent = timelineData.events[parentIdx];
+          parent.children = [...(parent.children || []), newEvent];
+          setTimelineData({ ...timelineData });
+        }
+      }
+    } else {
+      // Add as top-level event
+      setLocalEvents(prev => {
+        const next = [...prev, newEvent];
+        saveLocalEvents(currentTimelineId, next);
+        return next;
+      });
+    }
     return newEvent.id;
-  }, [currentTimelineId]);
+  }, [currentTimelineId, timelineData]);
 
   // Update an event
   const updateEvent = useCallback((eventId, updates) => {

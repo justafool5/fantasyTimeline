@@ -14,7 +14,7 @@ import {
 import EventCard from './EventCard';
 import AddEventForm from './AddEventForm';
 import AddTrackForm from './AddTrackForm';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const TIMELINE_PADDING = 120;
@@ -45,9 +45,53 @@ export default function TimelineView() {
   const scrollTimeoutRef = useRef(null);
   const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
   const timelineAreaRef = useRef(null);
+  
+  // Navigation stack for drilling into periods
+  const [navStack, setNavStack] = useState([]); // [{ periodEvent, parentTrackId }]
+  
+  // Current period context (if drilled in)
+  const currentPeriod = navStack.length > 0 ? navStack[navStack.length - 1] : null;
+
+  // Calculate effective master range (constrained when drilled into a period)
+  const effectiveMasterRange = useMemo(() => {
+    if (!currentPeriod) return masterRange;
+    
+    const pe = currentPeriod.periodEvent;
+    if (pe.trackId === null) {
+      // Cross-track period uses master dates
+      return {
+        start: pe.masterStartDate.year - 50, // Add padding
+        end: pe.masterEndDate.year + 50,
+      };
+    } else {
+      // Track-specific period - convert to master
+      const track = allTracks.find(t => t.id === pe.trackId);
+      if (!track) return masterRange;
+      return {
+        start: localToMaster(pe.startDate.year, track) - 50,
+        end: localToMaster(pe.endDate.year, track) + 50,
+      };
+    }
+  }, [currentPeriod, masterRange, allTracks]);
+
+  // Filter events based on drill-in context
+  const displayEvents = useMemo(() => {
+    if (!currentPeriod) return allEvents;
+    
+    // When drilled in, show children of the period event
+    const pe = currentPeriod.periodEvent;
+    return pe.children || [];
+  }, [currentPeriod, allEvents]);
+
+  // Filter cross-track events based on drill-in context
+  const displayCrossTrackEvents = useMemo(() => {
+    if (!currentPeriod) return crossTrackEvents;
+    // When drilled in, don't show cross-track events (they're at the top level)
+    return [];
+  }, [currentPeriod, crossTrackEvents]);
 
   const pixelsPerYear = BASE_PX_PER_YEAR * zoom;
-  const totalWidth = (masterRange.end - masterRange.start) * pixelsPerYear;
+  const totalWidth = (effectiveMasterRange.end - effectiveMasterRange.start) * pixelsPerYear;
 
   // Zoom via scroll wheel (also track scrolling state)
   useEffect(() => {
@@ -104,9 +148,15 @@ export default function TimelineView() {
     const rect = axisRef?.getBoundingClientRect();
     if (!rect) return;
     const clickX = e.clientX - rect.left;
-    const localYear = positionToLocalYear(clickX, track, masterRange, pixelsPerYear);
-    setAddEventState({ trackId: track.id, year: localYear });
-  }, [masterRange, pixelsPerYear]);
+    const localYear = positionToLocalYear(clickX, track, effectiveMasterRange, pixelsPerYear);
+    
+    // When drilled in, events are added as children of the current period
+    setAddEventState({ 
+      trackId: track.id, 
+      year: localYear,
+      parentPeriodId: currentPeriod?.periodEvent?.id || null,
+    });
+  }, [effectiveMasterRange, pixelsPerYear, currentPeriod]);
 
   if (!timelineMeta || !allTracks.length) {
     return (
@@ -123,17 +173,53 @@ export default function TimelineView() {
       {/* Header */}
       <div className={`text-center py-4 px-6 flex-shrink-0 ${theme === 'fantasy' ? 'border-b border-fantasy-border/40 bg-fantasy-card/60' : 'border-b border-scifi-border/40 bg-scifi-bg-secondary/50'}`}>
         <div className="flex items-center justify-center gap-4">
+          {/* Back button when drilled into a period */}
+          {currentPeriod && (
+            <button
+              data-testid="back-btn"
+              data-interactive="true"
+              onClick={() => setNavStack(prev => prev.slice(0, -1))}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border hover:text-fantasy-accent hover:border-fantasy-accent/50 font-fantasy-heading' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:text-scifi-accent hover:border-scifi-accent/50 font-scifi-heading'}`}
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
+          )}
+          
           <h1 data-testid="timeline-title" className={`text-2xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-lg tracking-widest'}`}>
-            {timelineMeta.title}
+            {currentPeriod ? currentPeriod.periodEvent.title : timelineMeta.title}
           </h1>
-          <button
-            data-testid="add-track-btn"
-            data-interactive="true"
-            onClick={() => setShowAddTrack(true)}
-            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/20 text-fantasy-accent border border-fantasy-accent/40 hover:bg-fantasy-accent/30 font-fantasy-heading' : 'bg-scifi-accent/20 text-scifi-accent border border-scifi-accent/40 hover:bg-scifi-accent/30 font-scifi-heading'}`}
-          >
-            <Plus size={14} /> Add Track
-          </button>
+          
+          {/* Period date range indicator */}
+          {currentPeriod && (() => {
+            const pe = currentPeriod.periodEvent;
+            const track = allTracks.find(t => t.id === pe.trackId);
+            if (pe.trackId === null) {
+              // Cross-track period
+              return (
+                <span className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                  (Reference: {pe.masterStartDate.year} — {pe.masterEndDate.year})
+                </span>
+              );
+            } else if (track) {
+              return (
+                <span className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                  ({pe.startDate.year} — {pe.endDate.year} {track.abbr})
+                </span>
+              );
+            }
+            return null;
+          })()}
+          
+          {!currentPeriod && (
+            <button
+              data-testid="add-track-btn"
+              data-interactive="true"
+              onClick={() => setShowAddTrack(true)}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/20 text-fantasy-accent border border-fantasy-accent/40 hover:bg-fantasy-accent/30 font-fantasy-heading' : 'bg-scifi-accent/20 text-scifi-accent border border-scifi-accent/40 hover:bg-scifi-accent/30 font-scifi-heading'}`}
+            >
+              <Plus size={14} /> Add Track
+            </button>
+          )}
         </div>
       </div>
 
@@ -150,40 +236,64 @@ export default function TimelineView() {
           className="relative"
           style={{
             width: totalWidth + TIMELINE_PADDING * 2,
-            minHeight: allTracks.length * TRACK_HEIGHT + 100,
+            minHeight: currentPeriod 
+              ? TRACK_HEIGHT + 100  // Single track view when drilled in
+              : allTracks.length * TRACK_HEIGHT + 100,
           }}
         >
-          {/* Render each track */}
-          {allTracks.map((track, trackIndex) => (
+          {/* When drilled into a period, show single track with children */}
+          {currentPeriod ? (
             <TrackRow
-              key={track.id}
-              track={track}
-              trackIndex={trackIndex}
-              events={allEvents.filter(e => e.trackId === track.id)}
-              masterRange={masterRange}
+              key={`drilled-${currentPeriod.periodEvent.id}`}
+              track={currentPeriod.parentTrackId 
+                ? allTracks.find(t => t.id === currentPeriod.parentTrackId) 
+                : allTracks[0]} // Fallback for cross-track periods
+              trackIndex={0}
+              events={displayEvents}
+              masterRange={effectiveMasterRange}
               pixelsPerYear={pixelsPerYear}
               totalWidth={totalWidth}
               expandedEvent={expandedEvent}
               setExpandedEvent={setExpandedEvent}
               onAxisClick={handleTrackAxisClick}
               theme={theme}
+              periodContext={currentPeriod.periodEvent}
             />
-          ))}
+          ) : (
+            <>
+              {/* Render each track */}
+              {allTracks.map((track, trackIndex) => (
+                <TrackRow
+                  key={track.id}
+                  track={track}
+                  trackIndex={trackIndex}
+                  events={displayEvents.filter(e => e.trackId === track.id)}
+                  masterRange={effectiveMasterRange}
+                  pixelsPerYear={pixelsPerYear}
+                  totalWidth={totalWidth}
+                  expandedEvent={expandedEvent}
+                  setExpandedEvent={setExpandedEvent}
+                  onAxisClick={handleTrackAxisClick}
+                  theme={theme}
+                />
+              ))}
 
-          {/* Cross-track events (vertical lines spanning all tracks) */}
-          {crossTrackEvents.map(evt => (
-            <CrossTrackEvent
-              key={evt.id}
-              event={evt}
-              tracks={allTracks}
-              masterRange={masterRange}
-              pixelsPerYear={pixelsPerYear}
-              trackCount={allTracks.length}
-              expandedEvent={expandedEvent}
-              setExpandedEvent={setExpandedEvent}
-              theme={theme}
-            />
-          ))}
+              {/* Cross-track events (vertical lines spanning all tracks) */}
+              {displayCrossTrackEvents.map(evt => (
+                <CrossTrackEvent
+                  key={evt.id}
+                  event={evt}
+                  tracks={allTracks}
+                  masterRange={effectiveMasterRange}
+                  pixelsPerYear={pixelsPerYear}
+                  trackCount={allTracks.length}
+                  expandedEvent={expandedEvent}
+                  setExpandedEvent={setExpandedEvent}
+                  theme={theme}
+                />
+              ))}
+            </>
+          )}
         </div>
       </div>
 
@@ -193,16 +303,14 @@ export default function TimelineView() {
           const evt = allEvents.find(e => e.id === expandedEvent);
           if (!evt) return null;
           
-          // Drill-in handler for period events
+          // Drill-in handler for period events - always allow drilling in
           const handleDrillIn = evt.type === 'period' ? () => {
-            // For now, just show an alert with sub-event count
-            // Full sub-timeline implementation would require navigation stack
-            const childCount = evt.children?.length || 0;
-            if (childCount > 0) {
-              alert(`This period has ${childCount} sub-events. Sub-timeline drill-down coming soon!`);
-            } else {
-              alert('This period has no sub-events yet. Add events within this time range to see them here.');
-            }
+            // Push to navigation stack and close the card
+            setNavStack(prev => [...prev, { 
+              periodEvent: evt, 
+              parentTrackId: evt.trackId 
+            }]);
+            setExpandedEvent(null);
           } : null;
           
           return (
@@ -225,6 +333,7 @@ export default function TimelineView() {
             year={addEventState.year}
             crossTrack={addEventState.crossTrack}
             masterYear={addEventState.masterYear}
+            parentPeriodId={addEventState.parentPeriodId}
             onClose={() => setAddEventState(null)}
           />
         )}
