@@ -301,14 +301,14 @@ function TrackRow({
         </div>
       ))}
 
-      {/* Axis line */}
+      {/* Axis line - larger click area for better UX */}
       <div
         ref={axisRef}
         data-testid={`track-axis-${track.id}`}
         data-interactive="true"
-        className="absolute h-6 cursor-pointer"
+        className="absolute h-10 cursor-pointer"
         style={{
-          top: AXIS_OFFSET - 12,
+          top: AXIS_OFFSET - 20,
           left: trackStartX,
           width: trackEndX - trackStartX,
         }}
