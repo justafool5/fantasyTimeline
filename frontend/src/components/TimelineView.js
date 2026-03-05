@@ -314,7 +314,12 @@ export default function TimelineView() {
       {/* Event Card Modal */}
       <AnimatePresence>
         {expandedEvent && (() => {
-          const evt = allEvents.find(e => e.id === expandedEvent);
+          // Search in both allEvents and displayEvents (for sub-events when drilled in)
+          let evt = allEvents.find(e => e.id === expandedEvent);
+          if (!evt && currentPeriod) {
+            // Also search in the period's children
+            evt = displayEvents.find(e => e.id === expandedEvent);
+          }
           if (!evt) return null;
           
           // Drill-in handler for period events - always allow drilling in
