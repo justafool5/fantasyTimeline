@@ -26,7 +26,7 @@ export default function TimelineView() {
   const [addEventYear, setAddEventYear] = useState(null);
   const [addEventParentId, setAddEventParentId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [hasDragged, setHasDragged] = useState(false);
+  const hasDraggedRef = useRef(false);
   const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
   const timelineAreaRef = useRef(null);
   const axisRef = useRef(null);
@@ -122,14 +122,14 @@ export default function TimelineView() {
   const handleMouseDown = useCallback((e) => {
     if (e.target.closest('[data-interactive]')) return;
     setIsDragging(true);
-    setHasDragged(false);
+    hasDraggedRef.current = false;
     setDragStart({ x: e.clientX, scrollLeft: scrollRef.current?.scrollLeft || 0 });
   }, [scrollRef]);
 
   const handleMouseMove = useCallback((e) => {
     if (!isDragging) return;
     const dx = e.clientX - dragStart.x;
-    if (Math.abs(dx) > 5) setHasDragged(true);
+    if (Math.abs(dx) > 5) hasDraggedRef.current = true;
     if (scrollRef.current) scrollRef.current.scrollLeft = dragStart.scrollLeft - dx;
   }, [isDragging, dragStart, scrollRef]);
 
@@ -142,21 +142,16 @@ export default function TimelineView() {
 
   // Click on axis to add event
   const handleAxisClick = useCallback((e) => {
-    if (hasDragged) return;
+    if (hasDraggedRef.current) return;
     e.stopPropagation();
     const rect = axisRef.current?.getBoundingClientRect();
     if (!rect || !effectiveDisplayMeta) return;
-    // axisRef left edge = TIMELINE_PADDING - 20, event origin = TIMELINE_PADDING → offset = 20
     const clickX = e.clientX - rect.left - 20;
     const year = positionToYear(clickX, effectiveDisplayMeta.startYear, pixelsPerYear);
-    const rangeStart = meta?.startYear ?? effectiveDisplayMeta.startYear;
-    const rangeEnd = meta?.endYear ?? effectiveDisplayMeta.endYear;
-    if (year >= rangeStart && year <= rangeEnd) {
-      setAddEventYear(year);
-      const currentNav = navStack.length > 0 ? navStack[navStack.length - 1] : null;
-      setAddEventParentId(currentNav?.parentEventId || null);
-    }
-  }, [effectiveDisplayMeta, meta, pixelsPerYear, hasDragged, navStack]);
+    setAddEventYear(year);
+    const currentNav = navStack.length > 0 ? navStack[navStack.length - 1] : null;
+    setAddEventParentId(currentNav?.parentEventId || null);
+  }, [effectiveDisplayMeta, pixelsPerYear, navStack]);
 
   if (!meta || !effectiveDisplayMeta) return null;
 
@@ -325,6 +320,7 @@ export default function TimelineView() {
           <div
             ref={axisRef}
             data-testid="timeline-axis"
+            data-interactive="true"
             className="absolute axis-hitbox"
             style={{ top: axisTop - AXIS_HITBOX_HEIGHT / 2, height: AXIS_HITBOX_HEIGHT, left: TIMELINE_PADDING - 20, right: TIMELINE_PADDING - 20 }}
             onClick={handleAxisClick}
