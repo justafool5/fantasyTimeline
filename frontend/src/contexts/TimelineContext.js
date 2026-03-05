@@ -292,6 +292,15 @@ export function TimelineProvider({ children }) {
     URL.revokeObjectURL(url);
   }, [timelineData, allTracks, allEvents, currentTimelineId]);
 
+  // Clear all local data (events and tracks added via UI)
+  const clearLocalData = useCallback(() => {
+    if (!currentTimelineId) return;
+    localStorage.removeItem(`${STORAGE_KEY}_${currentTimelineId}`);
+    localStorage.removeItem(`${TRACKS_KEY}_${currentTimelineId}`);
+    setLocalEvents([]);
+    setLocalTracks([]);
+  }, [currentTimelineId]);
+
   // Switch timeline
   const switchTimeline = useCallback((id) => {
     setCurrentTimelineId(id);
@@ -322,6 +331,7 @@ export function TimelineProvider({ children }) {
       updateEvent,
       deleteEvent,
       downloadFullTimelineJSON,
+      clearLocalData,
       switchTimeline,
       scrollRef,
       localEvents,

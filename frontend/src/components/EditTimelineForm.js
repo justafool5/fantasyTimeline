@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
-import { X, Save } from 'lucide-react';
+import { X, Save, Trash2 } from 'lucide-react';
 
 export default function EditTimelineForm({ onClose }) {
-  const { timelineMeta, updateTimelineMeta } = useTimeline();
+  const { timelineMeta, updateTimelineMeta, clearLocalData, localEvents, localTracks } = useTimeline();
   const { theme } = useTheme();
 
   const [form, setForm] = useState({
@@ -27,6 +27,15 @@ export default function EditTimelineForm({ onClose }) {
     });
     onClose();
   };
+
+  const handleClearLocalData = () => {
+    if (window.confirm('Clear all locally added events and tracks? This cannot be undone. (Data from the JSON file will remain)')) {
+      clearLocalData();
+      onClose();
+    }
+  };
+
+  const hasLocalData = localEvents.length > 0 || localTracks.length > 0;
 
   const inputClass = theme === 'fantasy'
     ? 'bg-fantasy-bg border border-fantasy-border/60 text-fantasy-text font-fantasy-body px-3 py-2 w-full focus:outline-none focus:border-fantasy-accent'
@@ -142,6 +151,28 @@ export default function EditTimelineForm({ onClose }) {
           <Save size={16} />
           Save Changes
         </button>
+
+        {/* Clear Local Data */}
+        {hasLocalData && (
+          <div className={`mt-4 pt-4 border-t ${theme === 'fantasy' ? 'border-fantasy-border/30' : 'border-scifi-border/30'}`}>
+            <p className={`text-xs mb-2 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+              You have {localEvents.length} local event(s) and {localTracks.length} local track(s) stored in browser.
+            </p>
+            <button
+              data-testid="clear-local-data-btn"
+              type="button"
+              onClick={handleClearLocalData}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2 text-sm transition-all
+                ${theme === 'fantasy'
+                  ? 'bg-red-900/30 text-red-400 border border-red-700/50 hover:bg-red-900/50'
+                  : 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+                }`}
+            >
+              <Trash2 size={14} />
+              Clear Local Data
+            </button>
+          </div>
+        )}
       </motion.form>
     </motion.div>
   );
