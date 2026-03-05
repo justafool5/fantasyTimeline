@@ -1,65 +1,93 @@
-# ChronoWeave PRD
+# ChronoWeave Timeline Visualizer - PRD
 
 ## Original Problem Statement
-Multi-track coordinated timeline visualizer for world-builders. Users can visualize multiple civilizations/empires with independent calendar systems, all aligned on a hidden master timeline.
+Install the fantasyTimeline app from GitHub (https://github.com/justafool5/fantasyTimeline) and implement two enhancements:
+1. A tool to create new timelines (like an "add" button in the dropdown timeline selection menu) where users can enter minimum information, with view shifting to the new timeline
+2. The app should always open in a way that the longest available track fills the whole width of the screen (auto-fit zoom)
 
 ## Architecture
-- **Frontend**: React 19, Tailwind CSS 3, Framer Motion
-- **Backend**: None (static site for GitHub Pages)
-- **Storage**: localStorage for user-created tracks/events, JSON files for bundled timelines
+- **Frontend**: React 19 with Tailwind CSS 3.4, Framer Motion 12, Lucide React
+- **Storage**: Browser localStorage for user-created timelines, JSON files for pre-built timelines
+- **Type**: Pure static frontend app - no backend required
 
 ## User Personas
-1. **World-builders** - Creating fantasy/sci-fi universes with multiple civilizations
-2. **Writers** - Tracking story timelines across different narrative perspectives
-3. **Historians** - Visualizing parallel historical timelines with different calendars
+- World-builders and writers creating fictional histories
+- RPG enthusiasts tracking campaign timelines
+- Anyone visualizing parallel/overlapping timelines with multiple calendar systems
 
 ## Core Requirements (Static)
-- Multiple stacked horizontal track timelines
-- Each track has its own calendar system (name, abbreviation, epoch offset)
-- Cross-track events that span all tracks as vertical lines/bands
-- Year labels in local calendar only (never show master reference to users)
-- Add Track modal with color picker, calendar settings, epoch, range
-- Add Event form with track selector and cross-track checkbox
-- Edit events including year/reference year fields
-- Period events with "Open Sub-Timeline" action
-- Synchronized zoom across all tracks
-- Export full timeline as JSON
+- Multi-track timeline visualization with different calendar systems
+- Fantasy and Sci-Fi visual themes
+- Point events, period events, and undated events
+- Sub-timeline drill-down for period events
+- Zoom and drag navigation
+- Export timeline as JSON
 
 ## What's Been Implemented
-### 2025-03-05
-- Initial multi-track feature implementation
-- Stacked parallel axes layout (Option A design)
-- Cross-track events as vertical spanning lines/bands
-- EventCard shows equivalent years in all track calendars for cross-track events
-- Add Track modal with full configuration
-- Add Event form with cross-track checkbox
-- Year editing for both track-specific and cross-track events
-- Period events clickable with "Open Sub-Timeline" button
-- Two sample timelines: Ages of Eldoria (fantasy), Galactic Chronicles (sci-fi)
-- Bug fixes: drag-to-scroll, cache-busting, image aspect ratio
+
+### Session: Jan 5, 2026
+**Enhancements Completed:**
+
+1. **Create New Timeline Feature**
+   - Added "Create New Timeline" button to TimelinePicker dropdown
+   - Created AddTimelineForm component with fields:
+     - Timeline: Title, Description, Theme (Fantasy/Sci-Fi)
+     - First Track: Name, Calendar Name, Abbreviation, Color, Epoch, Year Range
+   - New timelines stored in localStorage with `isLocal: true` flag
+   - Timelines show "Local" badge in dropdown
+   - Auto-switches to newly created timeline
+
+2. **Auto-fit Zoom Feature**
+   - Added `calculateAutoFitZoom()` function in TimelineContext
+   - Automatically calculates optimal zoom level based on:
+     - Master range of all tracks
+     - Viewport width (minus sidebar)
+     - Base pixels per year constant
+   - Applied when timeline loads, resets when switching timelines
+
+3. **Edit Track Feature**
+   - Click on any track label in left sidebar to open edit form
+   - Edit all track properties: Name, Calendar Name, Abbreviation, Color, Epoch, Year Range
+   - Live preview shows changes before saving
+   - Delete button available for local tracks (with confirmation)
+   - Changes to JSON tracks saved in-memory (exportable via JSON download)
+
+4. **Sub-Timeline Auto-Fit**
+   - When drilling into a period event, the sub-timeline now auto-fits to fill screen width
+   - `fitToRange()` function recalculates zoom for any date range
+   - Works for both entering and exiting sub-timelines
+
+5. **Undated Events Feature**
+   - Third event type "Undated" available in Add Event form
+   - Two anchor dropdowns: "After Event" (earlier) and "Before Event" (later)
+   - Anchors include track start/end and all point/period events on the track
+   - Undated events positioned at midpoint between anchors
+   - Fuzzy visual style: dashed circular marker, dashed connector line, "(undated)" label
+   - Tooltip indicates "approximate position"
+
+**Files Modified:**
+- `/app/frontend/src/components/TimelinePicker.js` - Added create button and modal trigger
+- `/app/frontend/src/components/AddTimelineForm.js` - New component for timeline creation
+- `/app/frontend/src/components/EditTrackForm.js` - New component for track editing
+- `/app/frontend/src/components/AddEventForm.js` - Added undated event type with anchor selection
+- `/app/frontend/src/components/TimelineView.js` - Clickable track labels, edit modal, undated event rendering with fuzzy style
+- `/app/frontend/src/contexts/TimelineContext.js` - Added createTimeline(), updateTrack(), fitToRange(), auto-fit zoom logic
 
 ## Prioritized Backlog
-### P0 (Critical)
-- ✅ Multi-track display
-- ✅ Cross-track events
-- ✅ Year editing
-- ✅ Period event clickable
 
-### P1 (High)
-- Full sub-timeline drill-down for period events
-- Track deletion UI
+### P0 (Critical) - None remaining
 
-### P2 (Medium)
-- Mobile responsive layout
-- Tag-based filtering
-- Keyboard accessibility
+### P1 (High Priority)
+- Mobile optimization (pinch-to-zoom, responsive layout)
+- Search/filter events by tags
+- Import JSON file to restore local timelines
 
-### P3 (Low)
-- Drag-to-reorder tracks
-- Import timeline JSON
-- Search functionality
+### P2 (Medium Priority)
+- Month/day precision for zoom levels
+- Nested period-within-period support
+- Keyboard navigation
 
 ## Next Tasks
-1. Implement full sub-timeline navigation stack for period events
-2. Add track deletion button (with confirmation)
-3. Test and fix any remaining cross-track period interaction issues
+1. Test adding events to newly created local timelines
+2. Consider adding "Delete Timeline" option for local timelines
+3. Add confirmation when leaving page with unsaved local changes

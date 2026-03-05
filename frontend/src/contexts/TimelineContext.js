@@ -5,6 +5,7 @@ const TimelineContext = createContext();
 
 const STORAGE_KEY = 'chronoweave_local_events';
 const TRACKS_KEY = 'chronoweave_local_tracks';
+const LOCAL_TIMELINES_KEY = 'chronoweave_local_timelines';
 
 function loadLocalEvents(timelineId) {
   try {
@@ -32,8 +33,23 @@ function saveLocalTracks(timelineId, tracks) {
   localStorage.setItem(`${TRACKS_KEY}_${timelineId}`, JSON.stringify(tracks));
 }
 
+// Load and save local timelines
+function loadLocalTimelines() {
+  try {
+    const stored = localStorage.getItem(LOCAL_TIMELINES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalTimelines(timelines) {
+  localStorage.setItem(LOCAL_TIMELINES_KEY, JSON.stringify(timelines));
+}
+
 export function TimelineProvider({ children }) {
   const [manifest, setManifest] = useState(null);
+  const [localTimelines, setLocalTimelines] = useState([]);
   const [currentTimelineId, setCurrentTimelineId] = useState(null);
   const [timelineData, setTimelineData] = useState(null);
   const [localEvents, setLocalEvents] = useState([]);
@@ -41,6 +57,7 @@ export function TimelineProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [autoFitApplied, setAutoFitApplied] = useState(false);
   const [expandedEvent, setExpandedEvent] = useState(null);
   const scrollRef = useRef(null);
 
@@ -61,6 +78,10 @@ export function TimelineProvider({ children }) {
 
   // Load manifest and then fetch metadata from each timeline file
   useEffect(() => {
+    // Load local timelines first
+    const storedLocalTimelines = loadLocalTimelines();
+    setLocalTimelines(storedLocalTimelines);
+
     fetchNoCacheJSON(`${process.env.PUBLIC_URL}/data/manifest.json`)
       .then(async (data) => {
         // Load title/description from each timeline file
@@ -78,9 +99,13 @@ export function TimelineProvider({ children }) {
             }
           })
         );
-        setManifest({ ...data, timelines: timelinesWithMeta });
-        if (timelinesWithMeta.length > 0) {
-          setCurrentTimelineId(timelinesWithMeta[0].id);
+        
+        // Merge with local timelines
+        const allTimelines = [...timelinesWithMeta, ...storedLocalTimelines];
+        setManifest({ ...data, timelines: allTimelines });
+        
+        if (allTimelines.length > 0) {
+          setCurrentTimelineId(allTimelines[0].id);
         }
       })
       .catch(() => setError('Failed to load timeline manifest'));
@@ -94,18 +119,38 @@ export function TimelineProvider({ children }) {
 
     setLoading(true);
     setExpandedEvent(null);
+    setAutoFitApplied(false); // Reset auto-fit flag when switching timelines
 
-    fetchNoCacheJSON(`${process.env.PUBLIC_URL}/${entry.url}`)
-      .then(data => {
-        setTimelineData(data);
-        setLocalEvents(loadLocalEvents(currentTimelineId));
-        setLocalTracks(loadLocalTracks(currentTimelineId));
-        setLoading(false);
-      })
-      .catch(() => {
-        setError(`Failed to load timeline: ${entry.title || entry.id}`);
-        setLoading(false);
-      });
+    // Check if it's a local timeline
+    if (entry.isLocal) {
+      // Local timeline - data is stored in localStorage
+      const storedTracks = loadLocalTracks(currentTimelineId);
+      const localData = {
+        timeline: {
+          title: entry.title,
+          description: entry.description || '',
+        },
+        tracks: storedTracks,
+        events: [],
+      };
+      setTimelineData(localData);
+      setLocalEvents(loadLocalEvents(currentTimelineId));
+      setLocalTracks([]); // Don't duplicate tracks - they're already in timelineData
+      setLoading(false);
+    } else {
+      // Remote timeline - fetch from server
+      fetchNoCacheJSON(`${process.env.PUBLIC_URL}/${entry.url}`)
+        .then(data => {
+          setTimelineData(data);
+          setLocalEvents(loadLocalEvents(currentTimelineId));
+          setLocalTracks(loadLocalTracks(currentTimelineId));
+          setLoading(false);
+        })
+        .catch(() => {
+          setError(`Failed to load timeline: ${entry.title || entry.id}`);
+          setLoading(false);
+        });
+    }
   }, [manifest, currentTimelineId]);
 
   // Combined tracks (JSON + local)
@@ -124,6 +169,51 @@ export function TimelineProvider({ children }) {
   const masterRange = useMemo(() => {
     return calculateMasterRange(allTracks);
   }, [allTracks]);
+
+  // Calculate auto-fit zoom when timeline loads
+  const calculateAutoFitZoom = useCallback(() => {
+    if (!allTracks.length || autoFitApplied) return null;
+    
+    const range = masterRange.end - masterRange.start;
+    if (range <= 0) return 1;
+
+    // Get viewport width (accounting for sidebar)
+    const viewportWidth = window.innerWidth - 200; // 200px for sidebar + padding
+    const BASE_PX_PER_YEAR = 0.8;
+    const TIMELINE_PADDING = 150;
+    
+    // Calculate zoom to fit the longest track
+    const idealZoom = (viewportWidth - TIMELINE_PADDING) / (range * BASE_PX_PER_YEAR);
+    
+    // Clamp zoom to reasonable bounds (0.1 to 10)
+    return Math.min(Math.max(idealZoom, 0.1), 10);
+  }, [allTracks, masterRange, autoFitApplied]);
+
+  // Apply auto-fit zoom when tracks are loaded
+  useEffect(() => {
+    if (!loading && allTracks.length > 0 && !autoFitApplied) {
+      const autoZoom = calculateAutoFitZoom();
+      if (autoZoom !== null) {
+        setZoom(autoZoom);
+        setAutoFitApplied(true);
+      }
+    }
+  }, [loading, allTracks, autoFitApplied, calculateAutoFitZoom]);
+
+  // Fit zoom to a specific range (used for sub-timelines)
+  const fitToRange = useCallback((rangeStart, rangeEnd) => {
+    const range = rangeEnd - rangeStart;
+    if (range <= 0) return;
+
+    const viewportWidth = window.innerWidth - 200;
+    const BASE_PX_PER_YEAR = 0.8;
+    const TIMELINE_PADDING = 150;
+    
+    const idealZoom = (viewportWidth - TIMELINE_PADDING) / (range * BASE_PX_PER_YEAR);
+    const clampedZoom = Math.min(Math.max(idealZoom, 0.1), 10);
+    
+    setZoom(clampedZoom);
+  }, []);
 
   // Timeline metadata
   const timelineMeta = useMemo(() => {
@@ -160,6 +250,29 @@ export function TimelineProvider({ children }) {
     });
     return newTrack.id;
   }, [currentTimelineId]);
+
+  // Update a track
+  const updateTrack = useCallback((trackId, updates) => {
+    // Check if it's a local track
+    const isLocalTrack = localTracks.some(t => t.id === trackId);
+    
+    if (isLocalTrack) {
+      setLocalTracks(prev => {
+        const next = prev.map(t => t.id === trackId ? { ...t, ...updates } : t);
+        saveLocalTracks(currentTimelineId, next);
+        return next;
+      });
+    } else {
+      // Update in timelineData for JSON tracks (in-memory only, exported via JSON download)
+      setTimelineData(prev => {
+        if (!prev || !prev.tracks) return prev;
+        return {
+          ...prev,
+          tracks: prev.tracks.map(t => t.id === trackId ? { ...t, ...updates } : t)
+        };
+      });
+    }
+  }, [currentTimelineId, localTracks]);
 
   // Delete a track
   const deleteTrack = useCallback((trackId) => {
@@ -327,6 +440,55 @@ export function TimelineProvider({ children }) {
     setZoom(1);
   }, []);
 
+  // Create a new timeline
+  const createTimeline = useCallback(({ title, description, defaultTheme, firstTrack }) => {
+    const id = `local-timeline-${Date.now()}`;
+    
+    // Create the timeline entry
+    const newTimeline = {
+      id,
+      title,
+      description: description || '',
+      defaultTheme: defaultTheme || 'fantasy',
+      isLocal: true,
+    };
+
+    // Create the first track
+    const trackId = `local-track-${Date.now()}`;
+    const newTrack = {
+      id: trackId,
+      name: firstTrack.name,
+      calendarName: firstTrack.calendarName,
+      abbr: firstTrack.abbr,
+      color: firstTrack.color,
+      epoch: firstTrack.epoch,
+      startYear: firstTrack.startYear,
+      endYear: firstTrack.endYear,
+      isLocal: true,
+    };
+
+    // Save the track for this timeline
+    saveLocalTracks(id, [newTrack]);
+
+    // Update local timelines list
+    const updatedLocalTimelines = [...localTimelines, newTimeline];
+    setLocalTimelines(updatedLocalTimelines);
+    saveLocalTimelines(updatedLocalTimelines);
+
+    // Update manifest to include new timeline
+    if (manifest) {
+      setManifest(prev => ({
+        ...prev,
+        timelines: [...prev.timelines, newTimeline]
+      }));
+    }
+
+    // Switch to the new timeline
+    setCurrentTimelineId(id);
+
+    return id;
+  }, [localTimelines, manifest]);
+
   return (
     <TimelineContext.Provider value={{
       manifest,
@@ -342,10 +504,12 @@ export function TimelineProvider({ children }) {
       error,
       zoom,
       setZoom,
+      fitToRange,
       expandedEvent,
       setExpandedEvent,
       getTrackEvents,
       addTrack,
+      updateTrack,
       deleteTrack,
       addEvent,
       updateEvent,
@@ -353,6 +517,7 @@ export function TimelineProvider({ children }) {
       downloadFullTimelineJSON,
       clearLocalData,
       switchTimeline,
+      createTimeline,
       scrollRef,
       localEvents,
       localTracks,

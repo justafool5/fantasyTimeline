@@ -14,8 +14,9 @@ import {
 import EventCard from './EventCard';
 import AddEventForm from './AddEventForm';
 import AddTrackForm from './AddTrackForm';
+import EditTrackForm from './EditTrackForm';
 import EditTimelineForm from './EditTimelineForm';
-import { Plus, ArrowLeft, Settings } from 'lucide-react';
+import { Plus, ArrowLeft, Settings, Pencil } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const TIMELINE_PADDING = 120;
@@ -32,6 +33,7 @@ export default function TimelineView() {
     masterRange,
     zoom,
     setZoom,
+    fitToRange,
     expandedEvent,
     setExpandedEvent,
     scrollRef,
@@ -40,6 +42,7 @@ export default function TimelineView() {
 
   const [addEventState, setAddEventState] = useState(null); // { trackId, year } or { crossTrack: true, masterYear }
   const [showAddTrack, setShowAddTrack] = useState(false);
+  const [editingTrack, setEditingTrack] = useState(null); // track object to edit
   const [showEditTimeline, setShowEditTimeline] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const hasDraggedRef = useRef(false);
@@ -93,6 +96,12 @@ export default function TimelineView() {
       };
     }
   }, [currentPeriod, masterRange, allTracks]);
+
+  // Auto-fit zoom when entering/exiting sub-timelines
+  useEffect(() => {
+    // Fit to the effective range whenever navStack changes
+    fitToRange(effectiveMasterRange.start, effectiveMasterRange.end);
+  }, [navStack, effectiveMasterRange, fitToRange]);
 
   // Filter events based on drill-in context
   const displayEvents = useMemo(() => {
@@ -289,6 +298,7 @@ export default function TimelineView() {
                 : allTracks[0]}
               trackIndex={0}
               theme={theme}
+              onEdit={setEditingTrack}
             />
           ) : (
             allTracks.map((track, trackIndex) => (
@@ -297,6 +307,7 @@ export default function TimelineView() {
                 track={track}
                 trackIndex={trackIndex}
                 theme={theme}
+                onEdit={setEditingTrack}
               />
             ))
           )}
@@ -438,6 +449,16 @@ export default function TimelineView() {
         )}
       </AnimatePresence>
 
+      {/* Edit Track Form Modal */}
+      <AnimatePresence>
+        {editingTrack && (
+          <EditTrackForm 
+            track={editingTrack} 
+            onClose={() => setEditingTrack(null)} 
+          />
+        )}
+      </AnimatePresence>
+
       {/* Edit Timeline Form Modal */}
       <AnimatePresence>
         {showEditTimeline && (
@@ -449,17 +470,20 @@ export default function TimelineView() {
 }
 
 // Track label component for the fixed sidebar
-function TrackLabel({ track, trackIndex, theme }) {
+function TrackLabel({ track, trackIndex, theme, onEdit }) {
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2"
+      data-testid={`track-label-${track.id}`}
+      className={`flex items-center gap-2 px-3 py-2 group cursor-pointer transition-all ${theme === 'fantasy' ? 'hover:bg-fantasy-bg-secondary/50' : 'hover:bg-scifi-accent/5'}`}
       style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 20 }}
+      onClick={() => onEdit(track)}
+      title="Click to edit track"
     >
       <div
         className="w-4 h-4 rounded-sm flex-shrink-0"
         style={{ backgroundColor: track.color }}
       />
-      <div className="flex flex-col min-w-0">
+      <div className="flex flex-col min-w-0 flex-1">
         <span className={`text-sm font-bold truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
           {track.name}
         </span>
@@ -467,6 +491,10 @@ function TrackLabel({ track, trackIndex, theme }) {
           {track.calendarName}
         </span>
       </div>
+      <Pencil 
+        size={14} 
+        className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`} 
+      />
     </div>
   );
 }
@@ -502,25 +530,60 @@ function TrackRow({
 
   // Sort events by position for alternating placement
   const sortedEvents = useMemo(() => {
-    return [...events]
-      .filter(e => e.type === 'point' || e.type === 'period')
-      .sort((a, b) => {
-        // Handle both track-specific and cross-track events
-        const getYear = (e) => {
-          if (e.trackId === null) {
-            // Cross-track event
-            return e.type === 'point' ? e.masterDate?.year : e.masterStartDate?.year;
-          } else {
-            // Track-specific event
-            return e.type === 'point' ? e.date?.year : e.startDate?.year;
-          }
-        };
-        const aYear = getYear(a) || 0;
-        const bYear = getYear(b) || 0;
-        return aYear - bYear;
-      })
-      .map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
-  }, [events]);
+    // Get year for dated events
+    const getYear = (e) => {
+      if (e.trackId === null) {
+        // Cross-track event
+        return e.type === 'point' ? e.masterDate?.year : e.masterStartDate?.year;
+      } else {
+        // Track-specific event
+        return e.type === 'point' ? e.date?.year : e.startDate?.year;
+      }
+    };
+
+    // Separate dated and undated events
+    const datedEvents = events.filter(e => e.type === 'point' || e.type === 'period');
+    const undatedEvents = events.filter(e => e.type === 'undated');
+
+    // Sort dated events by year
+    datedEvents.sort((a, b) => (getYear(a) || 0) - (getYear(b) || 0));
+
+    // Calculate position for undated events based on anchors
+    const processedUndated = undatedEvents.map(evt => {
+      // Find anchor events
+      const afterEvt = evt.afterEvent ? datedEvents.find(e => e.id === evt.afterEvent) : null;
+      const beforeEvt = evt.beforeEvent ? datedEvents.find(e => e.id === evt.beforeEvent) : null;
+
+      // Calculate the midpoint year between anchors
+      let afterYear = afterEvt ? (getYear(afterEvt) || masterRange.start) : masterRange.start;
+      let beforeYear = beforeEvt ? (getYear(beforeEvt) || masterRange.end) : masterRange.end;
+
+      // For period anchors, use end date for "after" and start date for "before"
+      if (afterEvt?.type === 'period') {
+        afterYear = afterEvt.trackId === null 
+          ? afterEvt.masterEndDate?.year 
+          : afterEvt.endDate?.year;
+      }
+      if (beforeEvt?.type === 'period') {
+        beforeYear = beforeEvt.trackId === null 
+          ? beforeEvt.masterStartDate?.year 
+          : beforeEvt.startDate?.year;
+      }
+
+      // Position at the midpoint
+      const midYear = (afterYear + beforeYear) / 2;
+
+      return { ...evt, _calculatedYear: midYear };
+    });
+
+    // Merge all events and sort
+    const allProcessed = [
+      ...datedEvents.map(e => ({ ...e, _calculatedYear: getYear(e) })),
+      ...processedUndated
+    ].sort((a, b) => (a._calculatedYear || 0) - (b._calculatedYear || 0));
+
+    return allProcessed.map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
+  }, [events, masterRange]);
 
   const periodEvents = sortedEvents.filter(e => e.type === 'period');
 
@@ -615,9 +678,14 @@ function TrackRow({
       {sortedEvents.map(evt => {
         // Handle both track-specific and cross-track events
         const isCrossTrackEvent = evt.trackId === null;
+        const isUndated = evt.type === 'undated';
         let year, masterYear;
         
-        if (isCrossTrackEvent) {
+        if (isUndated) {
+          // Undated event uses calculated year from anchor positions
+          masterYear = evt._calculatedYear;
+          year = masterToLocal(masterYear, track);
+        } else if (isCrossTrackEvent) {
           // Cross-track event uses masterDate/masterStartDate
           masterYear = evt.type === 'point' ? evt.masterDate?.year : evt.masterStartDate?.year;
           year = masterToLocal(masterYear, track); // Convert to local for display
@@ -645,11 +713,13 @@ function TrackRow({
               zIndex: isExpanded ? 20 : 10,
             }}
           >
-            {/* Connector line */}
+            {/* Connector line - dashed for undated events */}
             <div
-              className="absolute left-1/2 -translate-x-1/2 w-px"
+              className="absolute left-1/2 -translate-x-1/2"
               style={{
-                backgroundColor: `${track.color}50`,
+                backgroundColor: isUndated ? 'transparent' : `${track.color}50`,
+                borderLeft: isUndated ? `1px dashed ${track.color}60` : 'none',
+                width: isUndated ? 0 : 1,
                 ...(evt.above
                   ? { bottom: 0, height: hasImage ? 70 : 50 }
                   : { top: 0, height: hasImage ? 70 : 50 }
@@ -657,21 +727,38 @@ function TrackRow({
               }}
             />
 
-            {/* Marker dot */}
+            {/* Marker dot - fuzzy/dashed ring for undated events */}
             <button
               data-testid={`event-marker-${evt.id}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setExpandedEvent(isExpanded ? null : evt.id);
               }}
-              className={`relative z-20 transition-all duration-200 ${theme === 'fantasy' ? 'w-3 h-3 rounded-full border-2 hover:scale-150' : 'w-3 h-3 rotate-45 border hover:scale-150'}`}
+              className={`relative z-20 transition-all duration-200 ${
+                isUndated 
+                  ? 'w-4 h-4 rounded-full hover:scale-125'
+                  : theme === 'fantasy' 
+                    ? 'w-3 h-3 rounded-full border-2 hover:scale-150' 
+                    : 'w-3 h-3 rotate-45 border hover:scale-150'
+              }`}
               style={{
-                backgroundColor: evt.type === 'period' ? track.color : (theme === 'fantasy' ? track.color : '#050510'),
+                backgroundColor: isUndated 
+                  ? `${track.color}30` 
+                  : evt.type === 'period' 
+                    ? track.color 
+                    : (theme === 'fantasy' ? track.color : '#050510'),
                 borderColor: track.color,
-                boxShadow: theme === 'scifi' ? `0 0 8px ${track.color}` : 'none',
-                marginTop: -6,
+                borderWidth: isUndated ? 2 : undefined,
+                borderStyle: isUndated ? 'dashed' : 'solid',
+                boxShadow: isUndated 
+                  ? `0 0 12px ${track.color}40` 
+                  : theme === 'scifi' 
+                    ? `0 0 8px ${track.color}` 
+                    : 'none',
+                marginTop: isUndated ? -8 : -6,
                 transform: isExpanded ? 'scale(1.5)' : undefined,
               }}
+              title={isUndated ? `${evt.title} (undated - approximate position)` : evt.title}
             />
 
             {/* Thumbnail + label */}
@@ -681,17 +768,17 @@ function TrackRow({
             >
               {hasImage && (
                 <div
-                  className="w-8 h-8 rounded-full overflow-hidden mb-1"
-                  style={{ border: `2px solid ${track.color}40` }}
+                  className={`w-8 h-8 rounded-full overflow-hidden mb-1 ${isUndated ? 'opacity-70' : ''}`}
+                  style={{ border: `2px ${isUndated ? 'dashed' : 'solid'} ${track.color}40` }}
                 >
                   <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
                 </div>
               )}
-              <div className={`text-[10px] font-bold leading-tight max-w-[100px] text-center truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+              <div className={`text-[10px] font-bold leading-tight max-w-[100px] text-center truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
                 {evt.title}
               </div>
               <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                {formatYear(year)} {track.abbr}
+                {isUndated ? '(undated)' : `${formatYear(year)} ${track.abbr}`}
               </div>
             </div>
           </div>
