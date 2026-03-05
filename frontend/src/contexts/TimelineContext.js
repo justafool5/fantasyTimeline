@@ -200,6 +200,21 @@ export function TimelineProvider({ children }) {
     }
   }, [loading, allTracks, autoFitApplied, calculateAutoFitZoom]);
 
+  // Fit zoom to a specific range (used for sub-timelines)
+  const fitToRange = useCallback((rangeStart, rangeEnd) => {
+    const range = rangeEnd - rangeStart;
+    if (range <= 0) return;
+
+    const viewportWidth = window.innerWidth - 200;
+    const BASE_PX_PER_YEAR = 0.8;
+    const TIMELINE_PADDING = 150;
+    
+    const idealZoom = (viewportWidth - TIMELINE_PADDING) / (range * BASE_PX_PER_YEAR);
+    const clampedZoom = Math.min(Math.max(idealZoom, 0.1), 10);
+    
+    setZoom(clampedZoom);
+  }, []);
+
   // Timeline metadata
   const timelineMeta = useMemo(() => {
     if (!timelineData) return null;
@@ -489,6 +504,7 @@ export function TimelineProvider({ children }) {
       error,
       zoom,
       setZoom,
+      fitToRange,
       expandedEvent,
       setExpandedEvent,
       getTrackEvents,

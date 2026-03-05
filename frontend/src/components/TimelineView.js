@@ -33,6 +33,7 @@ export default function TimelineView() {
     masterRange,
     zoom,
     setZoom,
+    fitToRange,
     expandedEvent,
     setExpandedEvent,
     scrollRef,
@@ -95,6 +96,12 @@ export default function TimelineView() {
       };
     }
   }, [currentPeriod, masterRange, allTracks]);
+
+  // Auto-fit zoom when entering/exiting sub-timelines
+  useEffect(() => {
+    // Fit to the effective range whenever navStack changes
+    fitToRange(effectiveMasterRange.start, effectiveMasterRange.end);
+  }, [navStack, effectiveMasterRange, fitToRange]);
 
   // Filter events based on drill-in context
   const displayEvents = useMemo(() => {
