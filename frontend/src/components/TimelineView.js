@@ -397,8 +397,18 @@ function TrackRow({
     return [...events]
       .filter(e => e.type === 'point' || e.type === 'period')
       .sort((a, b) => {
-        const aYear = a.type === 'point' ? a.date.year : a.startDate.year;
-        const bYear = b.type === 'point' ? b.date.year : b.startDate.year;
+        // Handle both track-specific and cross-track events
+        const getYear = (e) => {
+          if (e.trackId === null) {
+            // Cross-track event
+            return e.type === 'point' ? e.masterDate?.year : e.masterStartDate?.year;
+          } else {
+            // Track-specific event
+            return e.type === 'point' ? e.date?.year : e.startDate?.year;
+          }
+        };
+        const aYear = getYear(a) || 0;
+        const bYear = getYear(b) || 0;
         return aYear - bYear;
       })
       .map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
@@ -493,8 +503,22 @@ function TrackRow({
 
       {/* Event markers */}
       {sortedEvents.map(evt => {
-        const year = evt.type === 'point' ? evt.date.year : evt.startDate.year;
-        const masterYear = localToMaster(year, track);
+        // Handle both track-specific and cross-track events
+        const isCrossTrackEvent = evt.trackId === null;
+        let year, masterYear;
+        
+        if (isCrossTrackEvent) {
+          // Cross-track event uses masterDate/masterStartDate
+          masterYear = evt.type === 'point' ? evt.masterDate?.year : evt.masterStartDate?.year;
+          year = masterToLocal(masterYear, track); // Convert to local for display
+        } else {
+          // Track-specific event uses date/startDate
+          year = evt.type === 'point' ? evt.date?.year : evt.startDate?.year;
+          masterYear = localToMaster(year, track);
+        }
+        
+        if (masterYear === undefined) return null; // Skip invalid events
+        
         const x = (masterYear - masterRange.start) * pixelsPerYear;
         const isExpanded = expandedEvent === evt.id;
         const hasImage = !!evt.image;

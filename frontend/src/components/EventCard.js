@@ -19,16 +19,18 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
   let equivalentYears = [];
 
   if (isCrossTrack) {
-    const masterYear = event.type === 'point' ? event.masterDate.year : event.masterStartDate.year;
-    const masterEndYear = event.type === 'period' ? event.masterEndDate.year : null;
+    const masterYear = event.type === 'point' ? event.masterDate?.year : event.masterStartDate?.year;
+    const masterEndYear = event.type === 'period' ? event.masterEndDate?.year : null;
 
-    equivalentYears = tracks.map(t => ({
-      trackName: t.name,
-      abbr: t.abbr,
-      color: t.color,
-      year: masterToLocal(masterYear, t),
-      endYear: masterEndYear ? masterToLocal(masterEndYear, t) : null,
-    }));
+    if (masterYear !== undefined) {
+      equivalentYears = tracks.map(t => ({
+        trackName: t.name,
+        abbr: t.abbr,
+        color: t.color,
+        year: masterToLocal(masterYear, t),
+        endYear: masterEndYear ? masterToLocal(masterEndYear, t) : null,
+      }));
+    }
   } else if (track) {
     if (event.type === 'point') {
       yearDisplay = `${formatYear(event.date.year)} ${track.abbr}`;

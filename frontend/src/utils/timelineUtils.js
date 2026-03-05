@@ -140,11 +140,25 @@ export function resolveCrossTrackEventPositions(events, masterRange, pixelsPerYe
 }
 
 /**
- * Get period bar dimensions for a track event
+ * Get period bar dimensions for a track event (handles both track-specific and cross-track)
  */
 export function getTrackPeriodBarDimensions(event, track, masterRange, pixelsPerYear) {
-  const startMaster = localToMaster(event.startDate.year, track);
-  const endMaster = localToMaster(event.endDate.year, track);
+  let startMaster, endMaster;
+  
+  if (event.trackId === null) {
+    // Cross-track event uses master dates
+    startMaster = event.masterStartDate?.year;
+    endMaster = event.masterEndDate?.year;
+  } else {
+    // Track-specific event uses local dates
+    startMaster = localToMaster(event.startDate?.year, track);
+    endMaster = localToMaster(event.endDate?.year, track);
+  }
+  
+  if (startMaster === undefined || endMaster === undefined) {
+    return { left: 0, width: 0 };
+  }
+  
   return {
     left: (startMaster - masterRange.start) * pixelsPerYear,
     width: (endMaster - startMaster) * pixelsPerYear
