@@ -1,14 +1,9 @@
 {
   "timelines": [
     {
-      "id": "ages-of-eldoria",
-      "url": "data/ages-of-eldoria.json",
+      "id": "one-last-job",
+      "url": "data/one-last-job.json",
       "defaultTheme": "fantasy"
-    },
-    {
-      "id": "galactic-chronicles",
-      "url": "data/galactic-chronicles.json",
-      "defaultTheme": "scifi"
     }
   ]
 }
