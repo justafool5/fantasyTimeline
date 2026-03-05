@@ -55,7 +55,7 @@ Build a static timeline visualizer webapp (frontend-only, deployable via GitHub 
 - All core features implemented and tested (15/15)
 - Production build with stable filenames (no hashes)
 - README.md (user-facing) and TECHNICAL.md (developer reference) created
-- v3 Enhancements: centered modal EventCard, breadcrumb drill-down navigation (no depth limit), context events shown dimmed, timeline config dialog, header shows description
+- v4 Fixes: sub-timeline fills screen (1 context event each side), axis click year accuracy fixed, full JSON export always available
 
 ### P1 - Next
 - Keyboard navigation (arrow keys to move between events)
