@@ -44,18 +44,30 @@ export function TimelineProvider({ children }) {
   const [expandedEvent, setExpandedEvent] = useState(null);
   const scrollRef = useRef(null);
 
+  // Fetch with strong cache-busting
+  const fetchNoCacheJSON = async (url) => {
+    const cacheBuster = `?nocache=${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const response = await fetch(`${url}${cacheBuster}`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
+    return response.json();
+  };
+
   // Load manifest and then fetch metadata from each timeline file
   useEffect(() => {
-    const cacheBuster = `?t=${Date.now()}`;
-    fetch(`${process.env.PUBLIC_URL}/data/manifest.json${cacheBuster}`, { cache: 'no-store' })
-      .then(r => r.json())
+    fetchNoCacheJSON(`${process.env.PUBLIC_URL}/data/manifest.json`)
       .then(async (data) => {
         // Load title/description from each timeline file
         const timelinesWithMeta = await Promise.all(
           data.timelines.map(async (entry) => {
             try {
-              const res = await fetch(`${process.env.PUBLIC_URL}/${entry.url}${cacheBuster}`, { cache: 'no-store' });
-              const timelineData = await res.json();
+              const timelineData = await fetchNoCacheJSON(`${process.env.PUBLIC_URL}/${entry.url}`);
               return {
                 ...entry,
                 title: timelineData.timeline?.title || entry.id,
@@ -83,9 +95,7 @@ export function TimelineProvider({ children }) {
     setLoading(true);
     setExpandedEvent(null);
 
-    const cacheBuster = `?t=${Date.now()}`;
-    fetch(`${process.env.PUBLIC_URL}/${entry.url}${cacheBuster}`, { cache: 'no-store' })
-      .then(r => r.json())
+    fetchNoCacheJSON(`${process.env.PUBLIC_URL}/${entry.url}`)
       .then(data => {
         setTimelineData(data);
         setLocalEvents(loadLocalEvents(currentTimelineId));
