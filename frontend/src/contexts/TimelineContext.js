@@ -243,6 +243,94 @@ export function TimelineProvider({ children }) {
     });
   }, [currentTimelineId]);
 
+  // Update any event (JSON-loaded or local) — edits stored in-memory and in localStorage
+  const updateEvent = useCallback((eventId, updates) => {
+    // Try updating in loaded JSON data tree
+    const updateInTree = (events) => {
+      for (let i = 0; i < events.length; i++) {
+        if (events[i].id === eventId) {
+          events[i] = { ...events[i], ...updates };
+          return true;
+        }
+        if (events[i].children && updateInTree(events[i].children)) return true;
+      }
+      return false;
+    };
+
+    if (timelineData) {
+      const found = updateInTree(timelineData.events);
+      if (found) {
+        setTimelineData({ ...timelineData });
+        // Mark this edit in local storage for persistence
+        setLocalEvents(prev => {
+          // Store the edit as an override entry
+          const existing = prev.findIndex(e => e._editOf === eventId);
+          const editEntry = { _editOf: eventId, ...updates };
+          const next = existing >= 0
+            ? prev.map((e, i) => i === existing ? editEntry : e)
+            : [...prev, editEntry];
+          saveLocalEvents(currentTimelineId, next);
+          return next;
+        });
+        return;
+      }
+    }
+
+    // Try updating in local events
+    setLocalEvents(prev => {
+      const next = prev.map(e => e.id === eventId ? { ...e, ...updates } : e);
+      saveLocalEvents(currentTimelineId, next);
+      return next;
+    });
+
+    // Update nav stack if in drilled view
+    setNavStack(prev => prev.map(entry => ({
+      ...entry,
+      events: entry.events.map(e => e.id === eventId ? { ...e, ...updates } : e),
+    })));
+  }, [currentTimelineId, timelineData]);
+
+  // Delete any event (JSON-loaded or local)
+  const deleteEvent = useCallback((eventId) => {
+    // Remove from JSON data tree
+    const removeFromTree = (events) => {
+      const idx = events.findIndex(e => e.id === eventId);
+      if (idx >= 0) { events.splice(idx, 1); return true; }
+      for (const evt of events) {
+        if (evt.children && removeFromTree(evt.children)) return true;
+      }
+      return false;
+    };
+
+    if (timelineData) {
+      const found = removeFromTree(timelineData.events);
+      if (found) {
+        setTimelineData({ ...timelineData });
+        // Store deletion marker in localStorage
+        setLocalEvents(prev => {
+          const next = [...prev, { _deletedId: eventId }];
+          saveLocalEvents(currentTimelineId, next);
+          return next;
+        });
+      }
+    }
+
+    // Also remove from local events
+    setLocalEvents(prev => {
+      const next = prev.filter(e => e.id !== eventId && e._parentId !== eventId);
+      saveLocalEvents(currentTimelineId, next);
+      return next;
+    });
+
+    // Update nav stack
+    setNavStack(prev => prev.map(entry => ({
+      ...entry,
+      events: entry.events.filter(e => e.id !== eventId),
+    })));
+
+    setExpandedEvent(null);
+  }, [currentTimelineId, timelineData]);
+
   const downloadLocalEventsJSON = useCallback(() => {
     if (localEvents.length === 0) return;
     const blob = new Blob([JSON.stringify(localEvents, null, 2)], { type: 'application/json' });
@@ -325,6 +413,8 @@ export function TimelineProvider({ children }) {
       addLocalEvent,
       addChildEvent,
       removeLocalEvent,
+      updateEvent,
+      deleteEvent,
       downloadLocalEventsJSON,
       downloadFullTimelineJSON,
       updateConfig,

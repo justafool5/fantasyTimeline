@@ -18,8 +18,8 @@ export default function TimelineView() {
     zoom, setZoom,
     expandedEvent, setExpandedEvent,
     drillInto, navigateTo,
-    removeLocalEvent, scrollRef,
-    navStack,
+    scrollRef, navStack,
+    updateEvent, deleteEvent,
   } = useTimeline();
   const { theme } = useTheme();
 
@@ -333,6 +333,43 @@ export default function TimelineView() {
             <div className={`absolute left-0 right-0 ${theme === 'fantasy' ? 'h-[3px] bg-gradient-to-r from-transparent via-fantasy-accent/60 to-transparent' : 'h-[2px] bg-cyan-500/80 shadow-[0_0_10px_#00f3ff]'}`} style={{ top: '50%', transform: 'translateY(-50%)' }} />
           </div>
 
+          {/* FIX #1: Period boundary markers when in drilled-in view */}
+          {!isRoot && meta && effectiveDisplayMeta && (() => {
+            const startX = (meta.startYear - effectiveDisplayMeta.startYear) * pixelsPerYear + TIMELINE_PADDING;
+            const endX = (meta.endYear - effectiveDisplayMeta.startYear) * pixelsPerYear + TIMELINE_PADDING;
+            const regionWidth = endX - startX;
+            return (
+              <>
+                {/* Shaded region for the period */}
+                <div
+                  data-testid="period-region"
+                  className={`absolute pointer-events-none ${theme === 'fantasy' ? 'bg-fantasy-accent/[0.04]' : 'bg-cyan-500/[0.03]'}`}
+                  style={{ left: startX, width: regionWidth, top: 0, bottom: 0 }}
+                />
+                {/* Start boundary line */}
+                <div
+                  className={`absolute pointer-events-none ${theme === 'fantasy' ? 'w-px bg-fantasy-accent/30' : 'w-px bg-cyan-500/20'}`}
+                  style={{ left: startX, top: 20, bottom: 20, borderLeft: theme === 'fantasy' ? '1px dashed rgba(201,168,76,0.3)' : '1px dashed rgba(0,243,255,0.2)' }}
+                />
+                {/* End boundary line */}
+                <div
+                  className={`absolute pointer-events-none ${theme === 'fantasy' ? 'w-px bg-fantasy-accent/30' : 'w-px bg-cyan-500/20'}`}
+                  style={{ left: endX, top: 20, bottom: 20, borderLeft: theme === 'fantasy' ? '1px dashed rgba(201,168,76,0.3)' : '1px dashed rgba(0,243,255,0.2)' }}
+                />
+                {/* Start year label */}
+                <div className={`absolute pointer-events-none text-[9px] ${theme === 'fantasy' ? 'text-fantasy-accent/40 font-fantasy-heading' : 'text-scifi-accent/30 font-scifi-heading'}`}
+                  style={{ left: startX + 4, top: 24 }}>
+                  {formatYear(meta.startYear)}
+                </div>
+                {/* End year label */}
+                <div className={`absolute pointer-events-none text-[9px] ${theme === 'fantasy' ? 'text-fantasy-accent/40 font-fantasy-heading' : 'text-scifi-accent/30 font-scifi-heading'}`}
+                  style={{ left: endX - 30, top: 24 }}>
+                  {formatYear(meta.endYear)}
+                </div>
+              </>
+            );
+          })()}
+
           {/* Context period bars (dimmed) */}
           {contextPeriodEvents.map(evt => {
             const dims = getPeriodBarDimensions(evt, effectiveDisplayMeta.startYear, pixelsPerYear);
@@ -346,26 +383,24 @@ export default function TimelineView() {
           {/* Main period bars (interactive — click to drill in) */}
           {periodEvents.map(evt => {
             const dims = getPeriodBarDimensions(evt, effectiveDisplayMeta.startYear, pixelsPerYear);
-            const hasChildren = evt.children && evt.children.length > 0;
             return (
               <div
                 key={`period-${evt.id}`}
                 data-interactive="true"
                 data-testid={`period-bar-${evt.id}`}
                 className={`
-                  absolute period-bar transition-all
-                  ${hasChildren ? 'cursor-pointer' : 'cursor-default'}
+                  absolute period-bar transition-all cursor-pointer
                   ${theme === 'fantasy'
-                    ? `h-4 bg-fantasy-accent/10 border border-fantasy-border/40 ${hasChildren ? 'hover:bg-fantasy-accent/25 hover:border-fantasy-accent/60' : ''}`
-                    : `h-2 bg-cyan-900/40 border border-cyan-500/20 ${hasChildren ? 'hover:bg-cyan-500/30 hover:border-cyan-400/50' : ''}`
+                    ? 'h-4 bg-fantasy-accent/10 border border-fantasy-border/40 hover:bg-fantasy-accent/25 hover:border-fantasy-accent/60'
+                    : 'h-2 bg-cyan-900/40 border border-cyan-500/20 hover:bg-cyan-500/30 hover:border-cyan-400/50'
                   }
                 `}
                 style={{ left: dims.left + TIMELINE_PADDING, width: Math.max(dims.width, 4), top: axisTop - (theme === 'fantasy' ? 8 : 4) }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (hasChildren) drillInto(evt, events);
+                  drillInto(evt, events);
                 }}
-                title={hasChildren ? `${evt.title} — Click to explore sub-events` : evt.title}
+                title={`${evt.title} — Click to explore`}
               />
             );
           })}
@@ -396,8 +431,9 @@ export default function TimelineView() {
               key={expandedEvent}
               event={evt}
               onClose={() => setExpandedEvent(null)}
-              onDelete={removeLocalEvent}
-              onDrillIn={evt.type === 'period' && evt.children?.length > 0
+              onUpdate={(updates) => updateEvent(evt.id, updates)}
+              onDelete={() => deleteEvent(evt.id)}
+              onDrillIn={evt.type === 'period'
                 ? () => { drillInto(evt, events); setExpandedEvent(null); }
                 : null
               }
