@@ -14,7 +14,8 @@ import {
 import EventCard from './EventCard';
 import AddEventForm from './AddEventForm';
 import AddTrackForm from './AddTrackForm';
-import { Plus, ArrowLeft } from 'lucide-react';
+import EditTimelineForm from './EditTimelineForm';
+import { Plus, ArrowLeft, Settings } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const TIMELINE_PADDING = 120;
@@ -39,6 +40,7 @@ export default function TimelineView() {
 
   const [addEventState, setAddEventState] = useState(null); // { trackId, year } or { crossTrack: true, masterYear }
   const [showAddTrack, setShowAddTrack] = useState(false);
+  const [showEditTimeline, setShowEditTimeline] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const hasDraggedRef = useRef(false);
   const isScrollingRef = useRef(false);
@@ -225,14 +227,24 @@ export default function TimelineView() {
           })()}
           
           {!currentPeriod && (
-            <button
-              data-testid="add-track-btn"
-              data-interactive="true"
-              onClick={() => setShowAddTrack(true)}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/20 text-fantasy-accent border border-fantasy-accent/40 hover:bg-fantasy-accent/30 font-fantasy-heading' : 'bg-scifi-accent/20 text-scifi-accent border border-scifi-accent/40 hover:bg-scifi-accent/30 font-scifi-heading'}`}
-            >
-              <Plus size={14} /> Add Track
-            </button>
+            <>
+              <button
+                data-testid="edit-timeline-btn"
+                data-interactive="true"
+                onClick={() => setShowEditTimeline(true)}
+                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border hover:text-fantasy-accent hover:border-fantasy-accent/50 font-fantasy-heading' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:text-scifi-accent hover:border-scifi-accent/50 font-scifi-heading'}`}
+              >
+                <Settings size={14} />
+              </button>
+              <button
+                data-testid="add-track-btn"
+                data-interactive="true"
+                onClick={() => setShowAddTrack(true)}
+                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/20 text-fantasy-accent border border-fantasy-accent/40 hover:bg-fantasy-accent/30 font-fantasy-heading' : 'bg-scifi-accent/20 text-scifi-accent border border-scifi-accent/40 hover:bg-scifi-accent/30 font-scifi-heading'}`}
+              >
+                <Plus size={14} /> Add Track
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -393,6 +405,13 @@ export default function TimelineView() {
       <AnimatePresence>
         {showAddTrack && (
           <AddTrackForm onClose={() => setShowAddTrack(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Edit Timeline Form Modal */}
+      <AnimatePresence>
+        {showEditTimeline && (
+          <EditTimelineForm onClose={() => setShowEditTimeline(false)} />
         )}
       </AnimatePresence>
     </div>

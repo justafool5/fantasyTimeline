@@ -105,6 +105,15 @@ export function TimelineProvider({ children }) {
     return timelineData.timeline;
   }, [timelineData]);
 
+  // Update timeline metadata
+  const updateTimelineMeta = useCallback((updates) => {
+    if (!timelineData) return;
+    setTimelineData(prev => ({
+      ...prev,
+      timeline: { ...prev.timeline, ...updates }
+    }));
+  }, [timelineData]);
+
   // Get events for a specific track
   const getTrackEvents = useCallback((trackId) => {
     return allEvents.filter(e => e.trackId === trackId);
@@ -269,6 +278,7 @@ export function TimelineProvider({ children }) {
       currentTimelineId,
       timelineData,
       timelineMeta,
+      updateTimelineMeta,
       allTracks,
       allEvents,
       crossTrackEvents,
