@@ -5,6 +5,15 @@
     "masterStart": -100,
     "masterEnd": 100
   },
-  "tracks": [],
+  "tracks": [{
+      "id": "main-party",
+      "name": "Main party storyline",
+      "calendarName": "Party Time",
+      "abbr": "PR",
+      "color": "#c9a84c",
+      "epoch": -100,
+      "startYear": -0,
+      "endYear": 200
+    }],
   "events": []
 }
