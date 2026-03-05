@@ -14,8 +14,9 @@ import {
 import EventCard from './EventCard';
 import AddEventForm from './AddEventForm';
 import AddTrackForm from './AddTrackForm';
+import EditTrackForm from './EditTrackForm';
 import EditTimelineForm from './EditTimelineForm';
-import { Plus, ArrowLeft, Settings } from 'lucide-react';
+import { Plus, ArrowLeft, Settings, Pencil } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const TIMELINE_PADDING = 120;
@@ -40,6 +41,7 @@ export default function TimelineView() {
 
   const [addEventState, setAddEventState] = useState(null); // { trackId, year } or { crossTrack: true, masterYear }
   const [showAddTrack, setShowAddTrack] = useState(false);
+  const [editingTrack, setEditingTrack] = useState(null); // track object to edit
   const [showEditTimeline, setShowEditTimeline] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const hasDraggedRef = useRef(false);
@@ -289,6 +291,7 @@ export default function TimelineView() {
                 : allTracks[0]}
               trackIndex={0}
               theme={theme}
+              onEdit={setEditingTrack}
             />
           ) : (
             allTracks.map((track, trackIndex) => (
@@ -297,6 +300,7 @@ export default function TimelineView() {
                 track={track}
                 trackIndex={trackIndex}
                 theme={theme}
+                onEdit={setEditingTrack}
               />
             ))
           )}
@@ -438,6 +442,16 @@ export default function TimelineView() {
         )}
       </AnimatePresence>
 
+      {/* Edit Track Form Modal */}
+      <AnimatePresence>
+        {editingTrack && (
+          <EditTrackForm 
+            track={editingTrack} 
+            onClose={() => setEditingTrack(null)} 
+          />
+        )}
+      </AnimatePresence>
+
       {/* Edit Timeline Form Modal */}
       <AnimatePresence>
         {showEditTimeline && (
@@ -449,17 +463,20 @@ export default function TimelineView() {
 }
 
 // Track label component for the fixed sidebar
-function TrackLabel({ track, trackIndex, theme }) {
+function TrackLabel({ track, trackIndex, theme, onEdit }) {
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2"
+      data-testid={`track-label-${track.id}`}
+      className={`flex items-center gap-2 px-3 py-2 group cursor-pointer transition-all ${theme === 'fantasy' ? 'hover:bg-fantasy-bg-secondary/50' : 'hover:bg-scifi-accent/5'}`}
       style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 20 }}
+      onClick={() => onEdit(track)}
+      title="Click to edit track"
     >
       <div
         className="w-4 h-4 rounded-sm flex-shrink-0"
         style={{ backgroundColor: track.color }}
       />
-      <div className="flex flex-col min-w-0">
+      <div className="flex flex-col min-w-0 flex-1">
         <span className={`text-sm font-bold truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
           {track.name}
         </span>
@@ -467,6 +484,10 @@ function TrackLabel({ track, trackIndex, theme }) {
           {track.calendarName}
         </span>
       </div>
+      <Pencil 
+        size={14} 
+        className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`} 
+      />
     </div>
   );
 }

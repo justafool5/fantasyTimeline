@@ -45,10 +45,19 @@ Install the fantasyTimeline app from GitHub (https://github.com/justafool5/fanta
      - Base pixels per year constant
    - Applied when timeline loads, resets when switching timelines
 
+3. **Edit Track Feature**
+   - Click on any track label in left sidebar to open edit form
+   - Edit all track properties: Name, Calendar Name, Abbreviation, Color, Epoch, Year Range
+   - Live preview shows changes before saving
+   - Delete button available for local tracks (with confirmation)
+   - Changes to JSON tracks saved in-memory (exportable via JSON download)
+
 **Files Modified:**
 - `/app/frontend/src/components/TimelinePicker.js` - Added create button and modal trigger
 - `/app/frontend/src/components/AddTimelineForm.js` - New component for timeline creation
-- `/app/frontend/src/contexts/TimelineContext.js` - Added createTimeline(), auto-fit zoom logic, local timeline support
+- `/app/frontend/src/components/EditTrackForm.js` - New component for track editing
+- `/app/frontend/src/components/TimelineView.js` - Clickable track labels, edit modal
+- `/app/frontend/src/contexts/TimelineContext.js` - Added createTimeline(), updateTrack(), auto-fit zoom logic
 
 ## Prioritized Backlog
 

@@ -236,6 +236,29 @@ export function TimelineProvider({ children }) {
     return newTrack.id;
   }, [currentTimelineId]);
 
+  // Update a track
+  const updateTrack = useCallback((trackId, updates) => {
+    // Check if it's a local track
+    const isLocalTrack = localTracks.some(t => t.id === trackId);
+    
+    if (isLocalTrack) {
+      setLocalTracks(prev => {
+        const next = prev.map(t => t.id === trackId ? { ...t, ...updates } : t);
+        saveLocalTracks(currentTimelineId, next);
+        return next;
+      });
+    } else {
+      // Update in timelineData for JSON tracks (in-memory only, exported via JSON download)
+      setTimelineData(prev => {
+        if (!prev || !prev.tracks) return prev;
+        return {
+          ...prev,
+          tracks: prev.tracks.map(t => t.id === trackId ? { ...t, ...updates } : t)
+        };
+      });
+    }
+  }, [currentTimelineId, localTracks]);
+
   // Delete a track
   const deleteTrack = useCallback((trackId) => {
     // Remove track
@@ -470,6 +493,7 @@ export function TimelineProvider({ children }) {
       setExpandedEvent,
       getTrackEvents,
       addTrack,
+      updateTrack,
       deleteTrack,
       addEvent,
       updateEvent,
