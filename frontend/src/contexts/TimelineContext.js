@@ -128,6 +128,29 @@ export function TimelineProvider({ children }) {
     const localChildren = localEvents.filter(e => e._parentId === periodEvent.id);
     const allChildren = [...periodChildren, ...localChildren];
 
+    // Only keep 1 context event before and 1 after the period for orientation
+    const siblings = siblingEvents.filter(e => e.id !== periodEvent.id);
+    const periodStart = periodEvent.startDate.year;
+    const periodEnd = periodEvent.endDate.year;
+
+    const getYear = (e) => {
+      if (e.type === 'point') return e.date.year;
+      if (e.type === 'period') return e.startDate.year;
+      return null;
+    };
+
+    const before = siblings
+      .filter(e => { const y = getYear(e); return y !== null && y < periodStart; })
+      .sort((a, b) => getYear(b) - getYear(a));
+    const after = siblings
+      .filter(e => { const y = getYear(e); return y !== null && y > periodEnd; })
+      .sort((a, b) => getYear(a) - getYear(b));
+
+    const limitedContext = [
+      ...(before.length > 0 ? [before[0]] : []),
+      ...(after.length > 0 ? [after[0]] : []),
+    ];
+
     setNavStack(prev => [...prev, {
       events: allChildren,
       meta: {
@@ -136,7 +159,7 @@ export function TimelineProvider({ children }) {
         endYear: periodEvent.endDate.year,
         description: periodEvent.description,
       },
-      contextEvents: siblingEvents.filter(e => e.id !== periodEvent.id),
+      contextEvents: limitedContext,
       label: periodEvent.title,
       parentEventId: periodEvent.id,
     }]);
@@ -231,6 +254,44 @@ export function TimelineProvider({ children }) {
     URL.revokeObjectURL(url);
   }, [localEvents, currentTimelineId]);
 
+  // Download the full merged timeline JSON (for committing to repo)
+  const downloadFullTimelineJSON = useCallback(() => {
+    if (!timelineData) return;
+    const meta = effectiveMeta || timelineData.timeline;
+    const topLocalEvents = localEvents.filter(e => !e._parentId);
+
+    // Deep-clone events and strip isLocal / _parentId markers
+    const cleanEvent = (evt) => {
+      const clean = { ...evt };
+      delete clean.isLocal;
+      delete clean._parentId;
+      if (clean.children) {
+        clean.children = clean.children.map(cleanEvent);
+      }
+      return clean;
+    };
+
+    const allEvents = [...timelineData.events, ...topLocalEvents].map(cleanEvent);
+
+    const fullJson = {
+      timeline: {
+        title: meta.title,
+        startYear: meta.startYear,
+        endYear: meta.endYear,
+        ...(meta.description ? { description: meta.description } : {}),
+      },
+      events: allEvents,
+    };
+
+    const blob = new Blob([JSON.stringify(fullJson, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentTimelineId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [timelineData, effectiveMeta, localEvents, currentTimelineId]);
+
   const updateConfig = useCallback((newConfig) => {
     setConfigOverride(newConfig);
     saveConfig(currentTimelineId, newConfig);
@@ -265,6 +326,7 @@ export function TimelineProvider({ children }) {
       addChildEvent,
       removeLocalEvent,
       downloadLocalEventsJSON,
+      downloadFullTimelineJSON,
       updateConfig,
       configOverride,
       switchTimeline,

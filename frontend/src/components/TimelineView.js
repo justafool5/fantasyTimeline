@@ -40,20 +40,44 @@ export default function TimelineView() {
   // All events for positioning (main + context)
   const allDisplayEvents = useMemo(() => [...events, ...contextEvents], [events, contextEvents]);
 
-  // Resolve positions for all displayed events
+  // Compute effective meta range that includes context events
+  const effectiveDisplayMeta = useMemo(() => {
+    if (!meta) return null;
+    if (contextEvents.length === 0) return meta;
+
+    let minYear = meta.startYear;
+    let maxYear = meta.endYear;
+
+    for (const evt of contextEvents) {
+      if (evt.type === 'point' && evt.date) {
+        minYear = Math.min(minYear, evt.date.year);
+        maxYear = Math.max(maxYear, evt.date.year);
+      } else if (evt.type === 'period' && evt.startDate && evt.endDate) {
+        minYear = Math.min(minYear, evt.startDate.year);
+        maxYear = Math.max(maxYear, evt.endDate.year);
+      }
+    }
+
+    // Add padding around the range
+    const range = maxYear - minYear;
+    const pad = Math.max(range * 0.05, 10);
+    return { ...meta, startYear: Math.floor(minYear - pad), endYear: Math.ceil(maxYear + pad) };
+  }, [meta, contextEvents]);
+
+  // Resolve positions for all displayed events using the expanded range
   const { positions, totalWidth } = useMemo(() => {
-    if (!meta || !allDisplayEvents.length) return { positions: {}, totalWidth: 0 };
-    return resolveEventPositions(allDisplayEvents, meta, pixelsPerYear);
-  }, [allDisplayEvents, meta, pixelsPerYear]);
+    if (!effectiveDisplayMeta || !allDisplayEvents.length) return { positions: {}, totalWidth: 0 };
+    return resolveEventPositions(allDisplayEvents, effectiveDisplayMeta, pixelsPerYear);
+  }, [allDisplayEvents, effectiveDisplayMeta, pixelsPerYear]);
 
   // Period events (main only, not context)
   const periodEvents = useMemo(() => events.filter(e => e.type === 'period'), [events]);
   const contextPeriodEvents = useMemo(() => contextEvents.filter(e => e.type === 'period'), [contextEvents]);
 
-  // Year markers
+  // Year markers (use effectiveDisplayMeta for positioning consistency)
   const yearMarkers = useMemo(() => {
-    if (!meta) return [];
-    const range = meta.endYear - meta.startYear;
+    if (!effectiveDisplayMeta) return [];
+    const range = effectiveDisplayMeta.endYear - effectiveDisplayMeta.startYear;
     let step;
     if (range * pixelsPerYear < 800) step = Math.max(1, Math.floor(range / 10));
     else if (pixelsPerYear > 3) step = 50;
@@ -61,12 +85,12 @@ export default function TimelineView() {
     else if (pixelsPerYear > 0.5) step = 200;
     else step = 500;
     const markers = [];
-    const start = Math.ceil(meta.startYear / step) * step;
-    for (let y = start; y <= meta.endYear; y += step) {
-      markers.push({ year: y, x: (y - meta.startYear) * pixelsPerYear });
+    const start = Math.ceil(effectiveDisplayMeta.startYear / step) * step;
+    for (let y = start; y <= effectiveDisplayMeta.endYear; y += step) {
+      markers.push({ year: y, x: (y - effectiveDisplayMeta.startYear) * pixelsPerYear });
     }
     return markers;
-  }, [meta, pixelsPerYear]);
+  }, [effectiveDisplayMeta, pixelsPerYear]);
 
   // Sort and alternate main events
   const sortedEvents = useMemo(() => {
@@ -121,19 +145,20 @@ export default function TimelineView() {
     if (hasDragged) return;
     e.stopPropagation();
     const rect = axisRef.current?.getBoundingClientRect();
-    if (!rect || !meta) return;
-    const scrollLeft = scrollRef.current?.scrollLeft || 0;
-    const clickX = e.clientX - rect.left + scrollLeft;
-    const year = positionToYear(clickX, meta.startYear, pixelsPerYear);
-    if (year >= meta.startYear && year <= meta.endYear) {
+    if (!rect || !effectiveDisplayMeta) return;
+    // axisRef left edge = TIMELINE_PADDING - 20, event origin = TIMELINE_PADDING → offset = 20
+    const clickX = e.clientX - rect.left - 20;
+    const year = positionToYear(clickX, effectiveDisplayMeta.startYear, pixelsPerYear);
+    const rangeStart = meta?.startYear ?? effectiveDisplayMeta.startYear;
+    const rangeEnd = meta?.endYear ?? effectiveDisplayMeta.endYear;
+    if (year >= rangeStart && year <= rangeEnd) {
       setAddEventYear(year);
-      // If we're in a drilled-down view, set the parent ID for child events
       const currentNav = navStack.length > 0 ? navStack[navStack.length - 1] : null;
       setAddEventParentId(currentNav?.parentEventId || null);
     }
-  }, [meta, pixelsPerYear, scrollRef, hasDragged, navStack]);
+  }, [effectiveDisplayMeta, meta, pixelsPerYear, hasDragged, navStack]);
 
-  if (!meta) return null;
+  if (!meta || !effectiveDisplayMeta) return null;
 
   const axisTop = MARKER_AREA_HEIGHT + 20;
 
@@ -310,7 +335,7 @@ export default function TimelineView() {
 
           {/* Context period bars (dimmed) */}
           {contextPeriodEvents.map(evt => {
-            const dims = getPeriodBarDimensions(evt, meta.startYear, pixelsPerYear);
+            const dims = getPeriodBarDimensions(evt, effectiveDisplayMeta.startYear, pixelsPerYear);
             return (
               <div key={`ctx-period-${evt.id}`} className={`absolute opacity-15 ${theme === 'fantasy' ? 'h-4 bg-fantasy-accent/20 border border-fantasy-border/20' : 'h-2 bg-cyan-900/20 border border-cyan-500/10'}`}
                 style={{ left: dims.left + TIMELINE_PADDING, width: Math.max(dims.width, 4), top: axisTop - (theme === 'fantasy' ? 8 : 4) }}
@@ -320,7 +345,7 @@ export default function TimelineView() {
 
           {/* Main period bars (interactive — click to drill in) */}
           {periodEvents.map(evt => {
-            const dims = getPeriodBarDimensions(evt, meta.startYear, pixelsPerYear);
+            const dims = getPeriodBarDimensions(evt, effectiveDisplayMeta.startYear, pixelsPerYear);
             const hasChildren = evt.children && evt.children.length > 0;
             return (
               <div
