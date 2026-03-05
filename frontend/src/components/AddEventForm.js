@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
-import { X, Plus, Globe } from 'lucide-react';
+import { X, Plus, Globe, HelpCircle } from 'lucide-react';
 import { formatYear } from '../utils/timelineUtils';
 
 export default function AddEventForm({ trackId, year, crossTrack, masterYear, parentPeriodId, forceCrossTrack, onClose }) {
-  const { addEvent, allTracks } = useTimeline();
+  const { addEvent, allTracks, allEvents } = useTimeline();
   const { theme } = useTheme();
 
   const initialTrack = trackId || (allTracks.length > 0 ? allTracks[0].id : null);
@@ -29,9 +29,45 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
     tags: '',
     trackId: initialTrack,
     isCrossTrack: forceCrossTrack ? true : (isAddingToParent ? false : (crossTrack || false)),
+    // Undated event anchors
+    afterEvent: '', // Event ID or empty for track/timeline start
+    beforeEvent: '', // Event ID or empty for track/timeline end
   });
 
   const selectedTrack = allTracks.find(t => t.id === form.trackId);
+
+  // Get available anchor events for undated positioning
+  const anchorEvents = useMemo(() => {
+    if (form.type !== 'undated') return [];
+    
+    // Filter events that can be anchors (point and period events on the same track or cross-track)
+    let candidates = allEvents.filter(e => {
+      // Must be a dated event (point or period)
+      if (e.type !== 'point' && e.type !== 'period') return false;
+      
+      if (form.isCrossTrack) {
+        // For cross-track undated events, only cross-track anchors make sense
+        return e.trackId === null;
+      } else {
+        // For track-specific undated, use same-track events
+        return e.trackId === form.trackId;
+      }
+    });
+    
+    // Sort by year
+    candidates.sort((a, b) => {
+      const getYear = (e) => {
+        if (e.trackId === null) {
+          return e.type === 'point' ? e.masterDate?.year : e.masterStartDate?.year;
+        } else {
+          return e.type === 'point' ? e.date?.year : e.startDate?.year;
+        }
+      };
+      return (getYear(a) || 0) - (getYear(b) || 0);
+    });
+    
+    return candidates;
+  }, [form.type, form.isCrossTrack, form.trackId, allEvents]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -45,7 +81,17 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
     };
 
-    if (form.isCrossTrack) {
+    if (form.type === 'undated') {
+      // Undated event with anchor references
+      event.afterEvent = form.afterEvent || null; // null means track/timeline start
+      event.beforeEvent = form.beforeEvent || null; // null means track/timeline end
+      
+      if (form.isCrossTrack) {
+        event.trackId = null;
+      } else {
+        event.trackId = form.trackId;
+      }
+    } else if (form.isCrossTrack) {
       // Cross-track event uses master dates
       event.trackId = null;
       if (form.type === 'point') {
@@ -186,26 +232,83 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
         <div className="mb-4">
           <label className={labelClass}>Type</label>
           <div className="flex gap-2">
-            {['point', 'period'].map(t => (
+            {['point', 'period', 'undated'].map(t => (
               <button
                 key={t}
                 type="button"
                 data-testid={`event-type-${t}`}
                 onClick={() => setForm(f => ({ ...f, type: t }))}
-                className={`px-3 py-1.5 text-xs font-bold uppercase transition-all
+                className={`px-3 py-1.5 text-xs font-bold uppercase transition-all flex items-center gap-1
                   ${form.type === t
                     ? theme === 'fantasy' ? 'bg-fantasy-accent text-fantasy-bg border border-fantasy-accent' : 'bg-scifi-accent text-scifi-bg border border-scifi-accent'
                     : theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border/60 hover:border-fantasy-accent/50' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:border-scifi-accent'
                   }`}
               >
+                {t === 'undated' && <HelpCircle size={12} />}
                 {t}
               </button>
             ))}
           </div>
+          {form.type === 'undated' && (
+            <p className={`text-xs mt-2 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+              Undated events are positioned between two anchor events
+            </p>
+          )}
         </div>
 
-        {/* Date fields */}
-        {form.isCrossTrack ? (
+        {/* Date fields - different for each type */}
+        {form.type === 'undated' ? (
+          // Undated: show anchor event dropdowns
+          <div className="mb-4">
+            <div className="mb-3">
+              <label className={labelClass}>After Event (earlier anchor)</label>
+              <select
+                data-testid="event-after-select"
+                value={form.afterEvent}
+                onChange={e => setForm(f => ({ ...f, afterEvent: e.target.value }))}
+                className={inputClass}
+              >
+                <option value="">{form.isCrossTrack ? '— Timeline Start —' : `— ${selectedTrack?.name || 'Track'} Start —`}</option>
+                {anchorEvents.map(evt => {
+                  const evtYear = evt.trackId === null 
+                    ? (evt.type === 'point' ? evt.masterDate?.year : evt.masterStartDate?.year)
+                    : (evt.type === 'point' ? evt.date?.year : evt.startDate?.year);
+                  const abbr = evt.trackId === null ? '' : (selectedTrack?.abbr || '');
+                  return (
+                    <option key={evt.id} value={evt.id}>
+                      {evt.title} ({evtYear} {abbr})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Before Event (later anchor)</label>
+              <select
+                data-testid="event-before-select"
+                value={form.beforeEvent}
+                onChange={e => setForm(f => ({ ...f, beforeEvent: e.target.value }))}
+                className={inputClass}
+              >
+                <option value="">{form.isCrossTrack ? '— Timeline End —' : `— ${selectedTrack?.name || 'Track'} End —`}</option>
+                {anchorEvents.map(evt => {
+                  const evtYear = evt.trackId === null 
+                    ? (evt.type === 'point' ? evt.masterDate?.year : evt.masterStartDate?.year)
+                    : (evt.type === 'point' ? evt.date?.year : evt.startDate?.year);
+                  const abbr = evt.trackId === null ? '' : (selectedTrack?.abbr || '');
+                  return (
+                    <option key={evt.id} value={evt.id}>
+                      {evt.title} ({evtYear} {abbr})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <p className={`text-xs mt-2 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+              The event will appear between these two anchors
+            </p>
+          </div>
+        ) : form.isCrossTrack ? (
           // Cross-track: show "reference year" (master) without calling it master
           form.type === 'point' ? (
             <div className="mb-4">

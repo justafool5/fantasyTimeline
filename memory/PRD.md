@@ -52,12 +52,26 @@ Install the fantasyTimeline app from GitHub (https://github.com/justafool5/fanta
    - Delete button available for local tracks (with confirmation)
    - Changes to JSON tracks saved in-memory (exportable via JSON download)
 
+4. **Sub-Timeline Auto-Fit**
+   - When drilling into a period event, the sub-timeline now auto-fits to fill screen width
+   - `fitToRange()` function recalculates zoom for any date range
+   - Works for both entering and exiting sub-timelines
+
+5. **Undated Events Feature**
+   - Third event type "Undated" available in Add Event form
+   - Two anchor dropdowns: "After Event" (earlier) and "Before Event" (later)
+   - Anchors include track start/end and all point/period events on the track
+   - Undated events positioned at midpoint between anchors
+   - Fuzzy visual style: dashed circular marker, dashed connector line, "(undated)" label
+   - Tooltip indicates "approximate position"
+
 **Files Modified:**
 - `/app/frontend/src/components/TimelinePicker.js` - Added create button and modal trigger
 - `/app/frontend/src/components/AddTimelineForm.js` - New component for timeline creation
 - `/app/frontend/src/components/EditTrackForm.js` - New component for track editing
-- `/app/frontend/src/components/TimelineView.js` - Clickable track labels, edit modal
-- `/app/frontend/src/contexts/TimelineContext.js` - Added createTimeline(), updateTrack(), auto-fit zoom logic
+- `/app/frontend/src/components/AddEventForm.js` - Added undated event type with anchor selection
+- `/app/frontend/src/components/TimelineView.js` - Clickable track labels, edit modal, undated event rendering with fuzzy style
+- `/app/frontend/src/contexts/TimelineContext.js` - Added createTimeline(), updateTrack(), fitToRange(), auto-fit zoom logic
 
 ## Prioritized Backlog
 
