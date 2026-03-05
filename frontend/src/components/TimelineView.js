@@ -192,12 +192,26 @@ export default function TimelineView() {
         {expandedEvent && (() => {
           const evt = allEvents.find(e => e.id === expandedEvent);
           if (!evt) return null;
+          
+          // Drill-in handler for period events
+          const handleDrillIn = evt.type === 'period' ? () => {
+            // For now, just show an alert with sub-event count
+            // Full sub-timeline implementation would require navigation stack
+            const childCount = evt.children?.length || 0;
+            if (childCount > 0) {
+              alert(`This period has ${childCount} sub-events. Sub-timeline drill-down coming soon!`);
+            } else {
+              alert('This period has no sub-events yet. Add events within this time range to see them here.');
+            }
+          } : null;
+          
           return (
             <EventCard
               key={expandedEvent}
               event={evt}
               tracks={allTracks}
               onClose={() => setExpandedEvent(null)}
+              onDrillIn={handleDrillIn}
             />
           );
         })()}
@@ -465,7 +479,8 @@ function CrossTrackEvent({
         top: 40,
         width: isPeriod ? width : 3,
         height: totalHeight - 20,
-        zIndex: isExpanded ? 25 : 5,
+        zIndex: isExpanded ? 25 : 2, // Lower z-index to avoid blocking track events
+        pointerEvents: 'auto',
       }}
       onClick={(e) => {
         e.stopPropagation();
@@ -474,9 +489,9 @@ function CrossTrackEvent({
     >
       {/* Vertical line or band */}
       <div
-        className="absolute inset-0 transition-all"
+        className="absolute inset-0 transition-all pointer-events-none"
         style={{
-          backgroundColor: isPeriod ? `${crossTrackColor}20` : crossTrackColor,
+          backgroundColor: isPeriod ? `${crossTrackColor}15` : crossTrackColor,
           borderLeft: `2px solid ${crossTrackColor}`,
           borderRight: isPeriod ? `2px solid ${crossTrackColor}` : 'none',
           boxShadow: theme === 'scifi' ? `0 0 10px ${crossTrackColor}` : 'none',
@@ -485,7 +500,7 @@ function CrossTrackEvent({
 
       {/* Label */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap transition-all"
+        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap transition-all pointer-events-auto"
         style={{ top: -25 }}
       >
         <div

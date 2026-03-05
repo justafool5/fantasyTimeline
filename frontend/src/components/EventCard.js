@@ -2,23 +2,23 @@ import React, { useState } from 'react';
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
-import { X, MapPin, Trash2, Pencil, Save, XCircle, Globe } from 'lucide-react';
+import { X, MapPin, Trash2, Pencil, Save, XCircle, Globe, Layers } from 'lucide-react';
 import { formatYear, getTagColor, masterToLocal, localToMaster } from '../utils/timelineUtils';
 
-export default function EventCard({ event, tracks, onClose }) {
+export default function EventCard({ event, tracks, onClose, onDrillIn }) {
   const { updateEvent, deleteEvent } = useTimeline();
   const { theme } = useTheme();
   const [editing, setEditing] = useState(false);
 
   const isCrossTrack = event.trackId === null;
   const track = !isCrossTrack ? tracks.find(t => t.id === event.trackId) : null;
+  const isPeriod = event.type === 'period';
 
-  // Get year info
+  // Get year info for display
   let yearDisplay = '';
   let equivalentYears = [];
 
   if (isCrossTrack) {
-    // Cross-track event: show equivalent in all tracks
     const masterYear = event.type === 'point' ? event.masterDate.year : event.masterStartDate.year;
     const masterEndYear = event.type === 'period' ? event.masterEndDate.year : null;
 
@@ -30,7 +30,6 @@ export default function EventCard({ event, tracks, onClose }) {
       endYear: masterEndYear ? masterToLocal(masterEndYear, t) : null,
     }));
   } else if (track) {
-    // Track-specific event
     if (event.type === 'point') {
       yearDisplay = `${formatYear(event.date.year)} ${track.abbr}`;
     } else if (event.type === 'period') {
@@ -38,12 +37,35 @@ export default function EventCard({ event, tracks, onClose }) {
     }
   }
 
-  const [form, setForm] = useState({
-    title: event.title,
-    description: event.description || '',
-    image: event.image || '',
-    tags: (event.tags || []).join(', '),
-  });
+  // Initialize form with all editable fields including dates
+  const getInitialFormState = () => {
+    const base = {
+      title: event.title,
+      description: event.description || '',
+      image: event.image || '',
+      tags: (event.tags || []).join(', '),
+    };
+
+    if (isCrossTrack) {
+      if (event.type === 'point') {
+        base.masterYear = event.masterDate?.year || 0;
+      } else if (event.type === 'period') {
+        base.masterStartYear = event.masterStartDate?.year || 0;
+        base.masterEndYear = event.masterEndDate?.year || 0;
+      }
+    } else {
+      if (event.type === 'point') {
+        base.year = event.date?.year || 0;
+      } else if (event.type === 'period') {
+        base.startYear = event.startDate?.year || 0;
+        base.endYear = event.endDate?.year || 0;
+      }
+    }
+
+    return base;
+  };
+
+  const [form, setForm] = useState(getInitialFormState);
 
   const handleSave = () => {
     const updates = {
@@ -52,6 +74,24 @@ export default function EventCard({ event, tracks, onClose }) {
       image: form.image.trim() || null,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
     };
+
+    // Update date fields based on event type
+    if (isCrossTrack) {
+      if (event.type === 'point') {
+        updates.masterDate = { year: parseInt(form.masterYear) };
+      } else if (event.type === 'period') {
+        updates.masterStartDate = { year: parseInt(form.masterStartYear) };
+        updates.masterEndDate = { year: parseInt(form.masterEndYear) };
+      }
+    } else {
+      if (event.type === 'point') {
+        updates.date = { year: parseInt(form.year) };
+      } else if (event.type === 'period') {
+        updates.startDate = { year: parseInt(form.startYear) };
+        updates.endDate = { year: parseInt(form.endYear) };
+      }
+    }
+
     updateEvent(event.id, updates);
     setEditing(false);
   };
@@ -113,15 +153,15 @@ export default function EventCard({ event, tracks, onClose }) {
             )}
 
             {/* Cross-track badge */}
-            {isCrossTrack && (
+            {isCrossTrack && !editing && (
               <div className={`flex items-center gap-1 mt-1.5 ${theme === 'fantasy' ? 'text-fantasy-accent-red' : 'text-pink-400'}`}>
                 <Globe size={12} />
                 <span className="text-xs font-bold">Cross-Track Event</span>
               </div>
             )}
 
-            {/* Track-specific year */}
-            {!isCrossTrack && yearDisplay && (
+            {/* Track-specific year display (non-editing) */}
+            {!isCrossTrack && !editing && yearDisplay && (
               <div className={`flex items-center gap-1.5 mt-1.5 text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
                 <MapPin size={13} />
                 <span>{yearDisplay}</span>
@@ -160,9 +200,93 @@ export default function EventCard({ event, tracks, onClose }) {
           </div>
         </div>
 
+        {/* Year editing fields (when editing) */}
+        {editing && (
+          <div className="px-5 pt-4 relative z-10">
+            {isCrossTrack ? (
+              // Cross-track event: edit reference year(s)
+              event.type === 'point' ? (
+                <div className="mb-3">
+                  <label className={labelClass}>Reference Year</label>
+                  <input
+                    data-testid="edit-master-year-input"
+                    type="number"
+                    value={form.masterYear}
+                    onChange={e => setForm(f => ({ ...f, masterYear: e.target.value }))}
+                    className={inputClass}
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className={labelClass}>Start Reference</label>
+                    <input
+                      data-testid="edit-master-start-input"
+                      type="number"
+                      value={form.masterStartYear}
+                      onChange={e => setForm(f => ({ ...f, masterStartYear: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>End Reference</label>
+                    <input
+                      data-testid="edit-master-end-input"
+                      type="number"
+                      value={form.masterEndYear}
+                      onChange={e => setForm(f => ({ ...f, masterEndYear: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              )
+            ) : (
+              // Track-specific event: edit local year(s)
+              event.type === 'point' ? (
+                <div className="mb-3">
+                  <label className={labelClass}>Year ({track?.abbr})</label>
+                  <input
+                    data-testid="edit-year-input"
+                    type="number"
+                    value={form.year}
+                    onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
+                    className={inputClass}
+                  />
+                  <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+                    In {track?.calendarName}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className={labelClass}>Start Year ({track?.abbr})</label>
+                    <input
+                      data-testid="edit-start-year-input"
+                      type="number"
+                      value={form.startYear}
+                      onChange={e => setForm(f => ({ ...f, startYear: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>End Year ({track?.abbr})</label>
+                    <input
+                      data-testid="edit-end-year-input"
+                      type="number"
+                      value={form.endYear}
+                      onChange={e => setForm(f => ({ ...f, endYear: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        )}
+
         {/* Image */}
         {editing ? (
-          <div className="p-4 pb-0 relative z-10">
+          <div className="px-5 pb-0 relative z-10">
             <label className={labelClass}>Image URL</label>
             <input
               data-testid="edit-image-input"
@@ -187,8 +311,8 @@ export default function EventCard({ event, tracks, onClose }) {
           </div>
         ) : null}
 
-        {/* Cross-track equivalent years */}
-        {isCrossTrack && equivalentYears.length > 0 && (
+        {/* Cross-track equivalent years (non-editing) */}
+        {isCrossTrack && !editing && equivalentYears.length > 0 && (
           <div className={`px-5 pt-4 relative z-10 ${theme === 'fantasy' ? 'border-t border-fantasy-border/20' : 'border-t border-scifi-border/20'}`}>
             <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
               Occurred at:
@@ -288,6 +412,29 @@ export default function EventCard({ event, tracks, onClose }) {
                 }`}
             >
               <XCircle size={14} /> Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Drill-in button for period events */}
+        {!editing && isPeriod && onDrillIn && (
+          <div className="px-5 pb-4 relative z-10">
+            <button
+              data-testid={`drill-into-${event.id}`}
+              onClick={onDrillIn}
+              className={`
+                flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all w-full justify-center
+                ${theme === 'fantasy'
+                  ? 'bg-fantasy-accent/15 text-fantasy-accent border border-fantasy-accent/40 font-fantasy-heading hover:bg-fantasy-accent/25'
+                  : 'bg-scifi-accent/10 text-scifi-accent border border-scifi-accent/30 font-scifi-heading hover:bg-scifi-accent/20'
+                }
+              `}
+            >
+              <Layers size={15} />
+              {event.children?.length > 0
+                ? `Explore ${event.children.length} sub-events`
+                : 'Open sub-timeline'
+              }
             </button>
           </div>
         )}
