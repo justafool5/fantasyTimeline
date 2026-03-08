@@ -2,18 +2,57 @@
   "timeline": {
     "title": "One last job...",
     "description": "Timeline of the major events in the party's history.",
-    "masterStart": -100,
-    "masterEnd": 100
+    "masterStart": -10,
+    "masterEnd": 25
   },
-  "tracks": [{
+  "tracks": [
+    {
       "id": "main-party",
-      "name": "Main party storyline",
-      "calendarName": "Party Time",
-      "abbr": "PR",
+      "name": "The Kindred Bound",
+      "calendarName": "Kindred Years",
+      "abbr": "KY",
       "color": "#c9a84c",
-      "epoch": -100,
-      "startYear": -0,
-      "endYear": 200
-    }],
-  "events": []
+      "epoch": 0,
+      "startYear": -10,
+      "endYear": 25
+    }
+  ],
+  "events": [
+    {
+      "type": "point",
+      "title": "The Kindred Bound is formed",
+      "description": "Rowena, Marlaina, Daniel and James form the original Kindred Bound party and set out to adventure",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "date": {
+        "year": 0
+      },
+      "id": "local-1772957953390"
+    },
+    {
+      "type": "point",
+      "title": "The Wispering Woods",
+      "description": "The Kindred Bound clears the Whispering Woods.\nA newborn is named after Rowena.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "date": {
+        "year": 10
+      },
+      "id": "local-1772958094047"
+    },
+    {
+      "type": "point",
+      "title": "Andura joins",
+      "description": "Andura joins the group and helps them clearing the Whispering Woods",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "date": {
+        "year": 9
+      },
+      "id": "local-1772958176454"
+    }
+  ]
 }
