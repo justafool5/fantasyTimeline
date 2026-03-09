@@ -2,8 +2,8 @@
   "timeline": {
     "title": "One last job...",
     "description": "Timeline of the major events in the party's history.",
-    "masterStart": -10,
-    "masterEnd": 25
+    "masterStart": 0,
+    "masterEnd": 250
   },
   "tracks": [
     {
@@ -13,8 +13,8 @@
       "abbr": "KY",
       "color": "#c9a84c",
       "epoch": 0,
-      "startYear": -10,
-      "endYear": 25
+      "startYear": 0,
+      "endYear": 250
     }
   ],
   "events": [
