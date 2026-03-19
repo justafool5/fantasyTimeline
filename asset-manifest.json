@@ -2,7 +2,9 @@
   "files": {
     "main.css": "/fantasyTimeline/static/css/main.css",
     "main.js": "/fantasyTimeline/static/js/main.js",
-    "index.html": "/fantasyTimeline/index.html"
+    "index.html": "/fantasyTimeline/index.html",
+    "main.css.map": "/fantasyTimeline/static/css/main.css.map",
+    "main.js.map": "/fantasyTimeline/static/js/main.js.map"
   },
   "entrypoints": [
     "static/css/main.css",
