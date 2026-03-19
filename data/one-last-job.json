@@ -3,7 +3,7 @@
     "title": "One last job...",
     "description": "Timeline of the major events in the party's history.",
     "masterStart": 0,
-    "masterEnd": 250
+    "masterEnd": 35
   },
   "tracks": [
     {
@@ -14,45 +14,247 @@
       "color": "#c9a84c",
       "epoch": 0,
       "startYear": 0,
-      "endYear": 250
+      "endYear": 35
     }
   ],
   "events": [
     {
+      "id": "olj-001",
       "type": "point",
-      "title": "The Kindred Bound is formed",
-      "description": "Rowena, Marlaina, Daniel and James form the original Kindred Bound party and set out to adventure",
+      "title": "The Kindred Bound is founded by Rowena, Daniel, Marlaina and James",
+      "description": "The original party forms.",
       "image": null,
       "tags": [],
       "trackId": "main-party",
-      "date": {
-        "year": 0
-      },
-      "id": "local-1772957953390"
+      "date": { "year": 0 }
     },
     {
-      "type": "point",
-      "title": "The Wispering Woods",
-      "description": "The Kindred Bound clears the Whispering Woods.\nA newborn is named after Rowena.",
+      "id": "olj-002",
+      "type": "undated",
+      "title": "Shadows of Westfall",
+      "description": "Early milestone from the campaign sketch.",
       "image": null,
       "tags": [],
       "trackId": "main-party",
-      "date": {
-        "year": 10
-      },
-      "id": "local-1772958094047"
+      "placementYear": 1,
+      "afterEvent": null,
+      "beforeEvent": null
     },
     {
-      "type": "point",
+      "id": "olj-003",
+      "type": "undated",
+      "title": "Party clears the Whispering Woods",
+      "description": "The party clears the Whispering Woods.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 3,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-004",
+      "type": "undated",
       "title": "Andura joins",
-      "description": "Andura joins the group and helps them clearing the Whispering Woods",
+      "description": "Andura joins the party.",
+      "image": null,
+      "tags": ["join"],
+      "trackId": "main-party",
+      "placementYear": 4,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-005",
+      "type": "undated",
+      "title": "Phinara Oakleaf leaves the party",
+      "description": "Phinara Oakleaf leaves the party.",
       "image": null,
       "tags": [],
       "trackId": "main-party",
-      "date": {
-        "year": 9
-      },
-      "id": "local-1772958176454"
+      "placementYear": 7,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-006",
+      "type": "undated",
+      "title": "Party investigates Spiderhaunt Woods",
+      "description": "The party investigates Spiderhaunt Woods.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 9,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-007",
+      "type": "undated",
+      "title": "Buckbarrow and his twin Froswick join the party",
+      "description": "Buckbarrow and Froswick join the party.",
+      "image": null,
+      "tags": ["join"],
+      "trackId": "main-party",
+      "placementYear": 10,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-008",
+      "type": "undated",
+      "title": "Party helps a unicorn in the feywild. Meet Codiwomple and make an enemy of Mother Blacknail",
+      "description": "The party meets Codiwomple and angers Mother Blacknail.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 12,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-009",
+      "type": "undated",
+      "title": "Verity joins the party",
+      "description": "Verity joins the party.",
+      "image": null,
+      "tags": ["join"],
+      "trackId": "main-party",
+      "placementYear": 14,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-010",
+      "type": "undated",
+      "title": "Someone in the party correctly speaks abyssal, making Verity very proud",
+      "description": "A small but memorable party moment.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 16,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-011",
+      "type": "undated",
+      "title": "The party makes an enemy of Stalzin the necromancer",
+      "description": "The group makes an enemy of Stalzin.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 17,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-012",
+      "type": "undated",
+      "title": "Marcan joins the party",
+      "description": "Marcan joins the party.",
+      "image": null,
+      "tags": ["join"],
+      "trackId": "main-party",
+      "placementYear": 19,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-013",
+      "type": "undated",
+      "title": "Mother Blacknail takes her revenge and Froswick vanishes in the Feywild",
+      "description": "Mother Blacknail strikes back and Froswick vanishes.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 20,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-014",
+      "type": "undated",
+      "title": "The group slays an abyssal creature before it can explain itself",
+      "description": "The group destroys an abyssal creature before it can speak.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 22,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-015",
+      "type": "undated",
+      "title": "Collapse of the Dwarven Citadel. Rowena questions the party's priorities",
+      "description": "The Dwarven Citadel collapses and Rowena questions the party's priorities.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 21,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-016",
+      "type": "undated",
+      "title": "The group burns precious scrolls. Kedar leaves the party",
+      "description": "A disastrous decision leads to Kedar leaving the party.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 24,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-017",
+      "type": "undated",
+      "title": "The party is tricked by a Zentharim while Marcan is away",
+      "description": "The party is tricked while Marcan is away.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 26,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-018",
+      "type": "undated",
+      "title": "The party encounters a ghost in an abandoned tower",
+      "description": "The party encounters a ghost in an abandoned tower.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 28,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-019",
+      "type": "undated",
+      "title": "Kidnappers in the region. The party saves a family from them",
+      "description": "The party saves a family from kidnappers.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 30,
+      "afterEvent": null,
+      "beforeEvent": null
+    },
+    {
+      "id": "olj-020",
+      "type": "undated",
+      "title": "Wedding feast. Rowena questions her life choices",
+      "description": "At a wedding feast, Rowena questions her life choices.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "placementYear": 33,
+      "afterEvent": null,
+      "beforeEvent": null
     }
   ]
 }

@@ -621,15 +621,19 @@ function TrackRow({
     // Sort dated events by year
     datedEvents.sort((a, b) => (getYear(a) || 0) - (getYear(b) || 0));
 
+    const directlyPlacedUndated = undatedEvents.filter(evt => Number.isFinite(evt.placementYear));
+    const anchoredUndated = undatedEvents.filter(evt => !Number.isFinite(evt.placementYear));
     const undatedGroups = new Map();
 
-    undatedEvents.forEach((evt) => {
+    anchoredUndated.forEach((evt) => {
       const key = `${evt.afterEvent ?? '__start__'}::${evt.beforeEvent ?? '__end__'}`;
       if (!undatedGroups.has(key)) undatedGroups.set(key, []);
       undatedGroups.get(key).push(evt);
     });
 
-    const processedUndated = [];
+    const processedUndated = directlyPlacedUndated
+      .sort((a, b) => (a.placementYear - b.placementYear) || (a.title || '').localeCompare(b.title || ''))
+      .map(evt => ({ ...evt, _calculatedYear: evt.placementYear }));
 
     undatedGroups.forEach((groupEvents) => {
       const sample = groupEvents[0];
