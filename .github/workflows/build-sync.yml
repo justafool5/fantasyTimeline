@@ -44,7 +44,12 @@ jobs:
       - name: Sync build output to repository root
         run: |
           rm -rf static asset-manifest.json index.html favicon.ico manifest.json robots.txt
-          cp -r frontend/build/* .
+          cp -R frontend/build/static ./static
+          cp frontend/build/index.html ./index.html
+          cp frontend/build/asset-manifest.json ./asset-manifest.json
+          cp frontend/build/favicon.ico ./favicon.ico
+          cp frontend/build/manifest.json ./manifest.json
+          cp frontend/build/robots.txt ./robots.txt
 
       - name: Commit generated site files
         run: |

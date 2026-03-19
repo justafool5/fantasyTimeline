@@ -1,26 +1,40 @@
 # ChronoWeave — Timeline Visualizer
 
-A visual, interactive timeline for world-builders, writers, and RPG enthusiasts.
-
-Load your events from a simple JSON file, explore them on a horizontal scrollable timeline, and switch between a **Heroic Fantasy** and a **Sci-Fi** theme.
+A static, interactive timeline app for world-builders, writers, and RPG projects.
 
 ![Fantasy Theme](docs/screenshot-fantasy.png)
 
 ## Features
 
-- **Three event types** — point events (exact date), period events (date range with expandable sub-timeline), and undated events (fuzzy placement between known events)
-- **Expandable cards** — click any marker to reveal full details, images, and colored tags
-- **Sub-timeline drill-down** — period events expand an inline sub-timeline below the main axis
-- **Add events on-the-fly** — click on the timeline, fill the form; new events live in your browser and are downloadable as JSON
-- **Multiple timelines** — switch between timelines from a manifest; each can have its own default theme
-- **Zoom & scroll** — Ctrl+Scroll to zoom, drag to pan
-- **Dual themes** — parchment & serif for fantasy, dark neon for sci-fi
+- Three event types: points, periods with drill-down sub-timelines, and undated events anchored between reference points
+- Multiple calendar tracks with automatic timeline bounds derived from track ranges and epochs
+- Unlimited zoom in, drag-to-pan, and zoom reset to the current timeline or sub-timeline limits
+- Dense label handling with collision-aware hiding, `...` cues, and click-to-zoom cluster bubbles
+- Optional visual placement for undated events via `placementYear`
+- Timeline-level canonical tags with color, reused across events
+- Colored tag chips in event cards and timeline labels
+- Local editing in the browser for timelines, tracks, events, and tag definitions
+- Fresh manifest loading so the timeline picker reflects deployed timelines
+- Dual themes: Heroic Fantasy and Sci-Fi
 
 ## Quick start
 
-Open `build/index.html` in a browser, or serve the `build/` folder with any static server.
+The deployed app is served from the repository root. For local development:
 
-To add your own timeline, create a JSON file in `build/data/`, then register it in `build/data/manifest.json`.
+```bash
+cd frontend
+npm install
+npm start
+```
+
+For a production build:
+
+```bash
+cd frontend
+GENERATE_SOURCEMAP=false npm run build
+```
+
+Then copy `frontend/build/` into the repo root (`index.html`, `static/`, and the root assets) for GitHub Pages.
 
 ## Data format
 
@@ -28,20 +42,52 @@ To add your own timeline, create a JSON file in `build/data/`, then register it 
 // data/manifest.json
 {
   "timelines": [
-    { "id": "my-world", "title": "My World", "url": "data/my-world.json", "defaultTheme": "fantasy" }
+    {
+      "id": "my-world",
+      "title": "My World",
+      "description": "Short description",
+      "url": "data/my-world.json",
+      "defaultTheme": "fantasy"
+    }
   ]
 }
 
 // data/my-world.json
 {
-  "timeline": { "title": "My World", "startYear": -500, "endYear": 2000 },
+  "timeline": {
+    "title": "My World",
+    "description": "Short description",
+    "tagDefinitions": [
+      { "id": "war", "label": "War", "color": "#8a0303" },
+      { "id": "magic", "label": "Magic", "color": "#6b3a8c" }
+    ]
+  },
+  "tracks": [
+    {
+      "id": "track-1",
+      "name": "Imperial Calendar",
+      "calendarName": "Imperial",
+      "abbr": "IC",
+      "epoch": 0,
+      "startYear": 0,
+      "endYear": 1200,
+      "color": "#c9a84c"
+    }
+  ],
   "events": [
-    { "id": "evt-1", "type": "point",   "title": "...", "date": { "year": 100 }, "description": "...", "image": "https://...", "tags": ["war"] },
-    { "id": "evt-2", "type": "period",  "title": "...", "startDate": { "year": 200 }, "endDate": { "year": 400 }, "children": [ /* sub-events */ ] },
-    { "id": "evt-3", "type": "undated", "title": "...", "afterEvent": "evt-1", "beforeEvent": "evt-2", "description": "..." }
+    { "id": "evt-1", "type": "point", "title": "Coronation", "trackId": "track-1", "date": { "year": 10 }, "tags": ["war"] },
+    { "id": "evt-2", "type": "period", "title": "Northern Campaign", "trackId": "track-1", "startDate": { "year": 40 }, "endDate": { "year": 55 }, "tags": ["war"], "children": [] },
+    { "id": "evt-3", "type": "undated", "title": "Lost Oath", "trackId": "track-1", "afterEvent": "evt-1", "beforeEvent": "evt-2", "tags": ["magic"] }
   ]
 }
 ```
+
+Notes:
+
+- Event titles are capped at 40 characters in the UI.
+- Event tags should reference timeline-level `tagDefinitions`.
+- Unknown tags are removed automatically during editing/loading.
+- For curated undated layouts, `placementYear` can be added to an undated event.
 
 ## License
 

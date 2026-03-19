@@ -1065,7 +1065,7 @@ function TrackRow({
                       {evt.resolvedTags.slice(0, 3).map(tag => (
                         <span
                           key={`${evt.id}-hidden-tag-dot-${tag.id}`}
-                          className="w-2 h-2 rounded-full"
+                          className="inline-block h-[6px] min-w-[10px] rounded-[2px]"
                           style={{ backgroundColor: tag.color }}
                           title={tag.label}
                         />
