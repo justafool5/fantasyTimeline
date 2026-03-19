@@ -1037,7 +1037,7 @@ function TrackRow({
                       {evt.resolvedTags.slice(0, 3).map(tag => (
                         <span
                           key={`${evt.id}-visible-tag-${tag.id}`}
-                          className="px-2 py-0.5 text-[8px] font-bold max-w-full"
+                          className="px-1.5 py-px text-[9px] font-bold max-w-full leading-none"
                           style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
                           title={tag.label}
                         >
@@ -1045,7 +1045,7 @@ function TrackRow({
                         </span>
                       ))}
                       {evt.resolvedTags.length > 3 && (
-                        <span className={`px-2 py-0.5 text-[8px] font-bold ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
+                        <span className={`px-1.5 py-px text-[9px] font-bold leading-none ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
                           +{evt.resolvedTags.length - 3} more
                         </span>
                       )}
