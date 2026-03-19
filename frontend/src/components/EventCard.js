@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
-import { X, MapPin, Trash2, Pencil, Save, XCircle, Globe, Layers } from 'lucide-react';
-import { formatYear, getTagColor, masterToLocal, localToMaster } from '../utils/timelineUtils';
+import { X, MapPin, Trash2, Pencil, Save, XCircle, Globe, Layers, HelpCircle } from 'lucide-react';
+import { formatYear, getTagColor, masterToLocal } from '../utils/timelineUtils';
 
 export default function EventCard({ event, tracks, onClose, onDrillIn }) {
-  const { updateEvent, deleteEvent } = useTimeline();
+  const { updateEvent, deleteEvent, allEvents } = useTimeline();
   const { theme } = useTheme();
   const [editing, setEditing] = useState(false);
 
   const isCrossTrack = event.trackId === null;
   const track = !isCrossTrack ? tracks.find(t => t.id === event.trackId) : null;
   const isPeriod = event.type === 'period';
+  const isUndated = event.type === 'undated';
 
   // Get year info for display
   let yearDisplay = '';
@@ -39,6 +40,30 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
     }
   }
 
+  const anchorEvents = useMemo(() => {
+    if (!isUndated) return [];
+
+    const candidates = allEvents.filter((candidate) => {
+      if (candidate.id === event.id) return false;
+      if (candidate.type !== 'point' && candidate.type !== 'period') return false;
+
+      if (isCrossTrack) {
+        return candidate.trackId === null;
+      }
+
+      return candidate.trackId === event.trackId;
+    });
+
+    const getAnchorYear = (candidate) => {
+      if (candidate.trackId === null) {
+        return candidate.type === 'point' ? candidate.masterDate?.year : candidate.masterStartDate?.year;
+      }
+      return candidate.type === 'point' ? candidate.date?.year : candidate.startDate?.year;
+    };
+
+    return [...candidates].sort((a, b) => (getAnchorYear(a) || 0) - (getAnchorYear(b) || 0));
+  }, [allEvents, event.id, event.trackId, isCrossTrack, isUndated]);
+
   // Initialize form with all editable fields including dates
   const getInitialFormState = () => {
     const base = {
@@ -48,7 +73,10 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
       tags: (event.tags || []).join(', '),
     };
 
-    if (isCrossTrack) {
+    if (isUndated) {
+      base.afterEvent = event.afterEvent || '';
+      base.beforeEvent = event.beforeEvent || '';
+    } else if (isCrossTrack) {
       if (event.type === 'point') {
         base.masterYear = event.masterDate?.year || 0;
       } else if (event.type === 'period') {
@@ -78,7 +106,10 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
     };
 
     // Update date fields based on event type
-    if (isCrossTrack) {
+    if (isUndated) {
+      updates.afterEvent = form.afterEvent || null;
+      updates.beforeEvent = form.beforeEvent || null;
+    } else if (isCrossTrack) {
       if (event.type === 'point') {
         updates.masterDate = { year: parseInt(form.masterYear) };
       } else if (event.type === 'period') {
@@ -163,6 +194,13 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
             )}
 
             {/* Track-specific year display (non-editing) */}
+            {!editing && isUndated && (
+              <div className={`flex items-center gap-1.5 mt-1.5 text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                <HelpCircle size={13} />
+                <span>Undated event anchored between timeline reference points</span>
+              </div>
+            )}
+
             {!isCrossTrack && !editing && yearDisplay && (
               <div className={`flex items-center gap-1.5 mt-1.5 text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
                 <MapPin size={13} />
@@ -205,7 +243,54 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
         {/* Year editing fields (when editing) */}
         {editing && (
           <div className="px-5 pt-4 relative z-10">
-            {isCrossTrack ? (
+            {isUndated ? (
+              <div className="grid gap-3 mb-3">
+                <div>
+                  <label className={labelClass}>After Event (earlier anchor)</label>
+                  <select
+                    data-testid="edit-after-event-select"
+                    value={form.afterEvent || ''}
+                    onChange={e => setForm(f => ({ ...f, afterEvent: e.target.value }))}
+                    className={inputClass}
+                  >
+                    <option value="">{isCrossTrack ? '— Timeline Start —' : `— ${track?.name || 'Track'} Start —`}</option>
+                    {anchorEvents.map(anchor => {
+                      const anchorYear = anchor.trackId === null
+                        ? (anchor.type === 'point' ? anchor.masterDate?.year : anchor.masterStartDate?.year)
+                        : (anchor.type === 'point' ? anchor.date?.year : anchor.startDate?.year);
+                      const anchorAbbr = anchor.trackId === null ? '' : (track?.abbr || '');
+                      return (
+                        <option key={anchor.id} value={anchor.id}>
+                          {anchor.title} ({anchorYear} {anchorAbbr})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Before Event (later anchor)</label>
+                  <select
+                    data-testid="edit-before-event-select"
+                    value={form.beforeEvent || ''}
+                    onChange={e => setForm(f => ({ ...f, beforeEvent: e.target.value }))}
+                    className={inputClass}
+                  >
+                    <option value="">{isCrossTrack ? '— Timeline End —' : `— ${track?.name || 'Track'} End —`}</option>
+                    {anchorEvents.map(anchor => {
+                      const anchorYear = anchor.trackId === null
+                        ? (anchor.type === 'point' ? anchor.masterDate?.year : anchor.masterStartDate?.year)
+                        : (anchor.type === 'point' ? anchor.date?.year : anchor.startDate?.year);
+                      const anchorAbbr = anchor.trackId === null ? '' : (track?.abbr || '');
+                      return (
+                        <option key={anchor.id} value={anchor.id}>
+                          {anchor.title} ({anchorYear} {anchorAbbr})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+            ) : isCrossTrack ? (
               // Cross-track event: edit reference year(s)
               event.type === 'point' ? (
                 <div className="mb-3">

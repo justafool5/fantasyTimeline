@@ -20,7 +20,6 @@ import { Plus, ArrowLeft, Settings, Pencil } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
-const MAX_ZOOM = 50;
 const TIMELINE_PADDING = 120;
 const TRACK_HEIGHT = 180;
 const AXIS_OFFSET = 100;
@@ -36,6 +35,7 @@ export default function TimelineView() {
     zoom,
     setZoom,
     fitToRange,
+    setResetZoomRange,
     expandedEvent,
     setExpandedEvent,
     scrollRef,
@@ -101,9 +101,11 @@ export default function TimelineView() {
 
   // Auto-fit zoom when entering/exiting sub-timelines
   useEffect(() => {
-    // Fit to the effective range whenever navStack changes
+    setResetZoomRange(effectiveMasterRange);
     fitToRange(effectiveMasterRange.start, effectiveMasterRange.end);
-  }, [navStack, effectiveMasterRange, fitToRange]);
+
+    return () => setResetZoomRange(null);
+  }, [navStack, effectiveMasterRange, fitToRange, setResetZoomRange]);
 
   // Filter events based on drill-in context
   const displayEvents = useMemo(() => {
@@ -139,7 +141,7 @@ export default function TimelineView() {
       if (e.shiftKey) return;
       e.preventDefault();
       const delta = e.deltaY > 0 ? 0.92 : 1.08;
-      setZoom(prev => Math.min(Math.max(prev * delta, MIN_ZOOM), MAX_ZOOM));
+      setZoom(prev => Math.max(prev * delta, MIN_ZOOM));
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);

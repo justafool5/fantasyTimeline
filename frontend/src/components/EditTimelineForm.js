@@ -11,8 +11,6 @@ export default function EditTimelineForm({ onClose }) {
   const [form, setForm] = useState({
     title: timelineMeta?.title || '',
     description: timelineMeta?.description || '',
-    masterStart: timelineMeta?.masterStart || -1000,
-    masterEnd: timelineMeta?.masterEnd || 2000,
   });
 
   const handleSubmit = (e) => {
@@ -22,8 +20,6 @@ export default function EditTimelineForm({ onClose }) {
     updateTimelineMeta({
       title: form.title.trim(),
       description: form.description.trim(),
-      masterStart: parseInt(form.masterStart),
-      masterEnd: parseInt(form.masterEnd),
     });
     onClose();
   };
@@ -108,31 +104,23 @@ export default function EditTimelineForm({ onClose }) {
           />
         </div>
 
-        {/* Master Range */}
+        {/* Derived Range */}
         <div className="mb-6">
           <label className={labelClass}>Reference Frame Range</label>
           <p className={`text-xs mb-2 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
-            The internal coordinate system used to align all tracks. Not displayed to users.
+            This range is derived automatically from the minimum and maximum of all tracks, including their epochs.
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid grid-cols-2 gap-3 p-3 ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30' : 'bg-scifi-bg/50 border border-scifi-border/30'}`}>
             <div>
-              <input
-                data-testid="timeline-master-start-input"
-                type="number"
-                value={form.masterStart}
-                onChange={e => setForm(f => ({ ...f, masterStart: e.target.value }))}
-                className={inputClass}
-              />
+              <div className={inputClass}>
+                {timelineMeta?.masterStart ?? '—'}
+              </div>
               <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>Start</p>
             </div>
             <div>
-              <input
-                data-testid="timeline-master-end-input"
-                type="number"
-                value={form.masterEnd}
-                onChange={e => setForm(f => ({ ...f, masterEnd: e.target.value }))}
-                className={inputClass}
-              />
+              <div className={inputClass}>
+                {timelineMeta?.masterEnd ?? '—'}
+              </div>
               <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>End</p>
             </div>
           </div>
