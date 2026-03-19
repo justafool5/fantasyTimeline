@@ -37,20 +37,6 @@ function saveLocalTracks(timelineId, tracks) {
   localStorage.setItem(`${TRACKS_KEY}_${timelineId}`, JSON.stringify(tracks));
 }
 
-// Load and save local timelines
-function loadLocalTimelines() {
-  try {
-    const stored = localStorage.getItem(LOCAL_TIMELINES_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalTimelines(timelines) {
-  localStorage.setItem(LOCAL_TIMELINES_KEY, JSON.stringify(timelines));
-}
-
 function findAndUpdateEvent(events, targetId, updater) {
   for (let i = 0; i < events.length; i++) {
     if (events[i].id === targetId) {
@@ -83,7 +69,6 @@ function findAndDeleteEvent(events, targetId) {
 
 export function TimelineProvider({ children }) {
   const [manifest, setManifest] = useState(null);
-  const [localTimelines, setLocalTimelines] = useState([]);
   const [currentTimelineId, setCurrentTimelineId] = useState(null);
   const [timelineData, setTimelineData] = useState(null);
   const [localEvents, setLocalEvents] = useState([]);
@@ -113,9 +98,9 @@ export function TimelineProvider({ children }) {
 
   // Load manifest and then fetch metadata from each timeline file
   useEffect(() => {
-    // Load local timelines first
-    const storedLocalTimelines = loadLocalTimelines();
-    setLocalTimelines(storedLocalTimelines);
+    // Older versions persisted locally created timelines in browser storage,
+    // which could make the picker show stale entries after deploys.
+    localStorage.removeItem(LOCAL_TIMELINES_KEY);
 
     fetchNoCacheJSON(`${process.env.PUBLIC_URL}/data/manifest.json`)
       .then(async (data) => {
@@ -135,12 +120,10 @@ export function TimelineProvider({ children }) {
           })
         );
         
-        // Merge with local timelines
-        const allTimelines = [...timelinesWithMeta, ...storedLocalTimelines];
-        setManifest({ ...data, timelines: allTimelines });
+        setManifest({ ...data, timelines: timelinesWithMeta });
         
-        if (allTimelines.length > 0) {
-          setCurrentTimelineId(allTimelines[0].id);
+        if (timelinesWithMeta.length > 0) {
+          setCurrentTimelineId(timelinesWithMeta[0].id);
         }
       })
       .catch(() => setError('Failed to load timeline manifest'));
@@ -282,12 +265,6 @@ export function TimelineProvider({ children }) {
     }));
 
     if (currentTimelineId?.startsWith('local-timeline-')) {
-      setLocalTimelines(prev => {
-        const next = prev.map(t => t.id === currentTimelineId ? { ...t, ...safeUpdates } : t);
-        saveLocalTimelines(next);
-        return next;
-      });
-
       setManifest(prev => {
         if (!prev) return prev;
         return {
@@ -530,11 +507,6 @@ export function TimelineProvider({ children }) {
     // Save the track for this timeline
     saveLocalTracks(id, [newTrack]);
 
-    // Update local timelines list
-    const updatedLocalTimelines = [...localTimelines, newTimeline];
-    setLocalTimelines(updatedLocalTimelines);
-    saveLocalTimelines(updatedLocalTimelines);
-
     // Update manifest to include new timeline
     if (manifest) {
       setManifest(prev => ({
@@ -547,7 +519,7 @@ export function TimelineProvider({ children }) {
     setCurrentTimelineId(id);
 
     return id;
-  }, [localTimelines, manifest]);
+  }, [manifest]);
 
   return (
     <TimelineContext.Provider value={{
