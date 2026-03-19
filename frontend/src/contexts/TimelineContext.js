@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { calculateMasterRange, normalizeTagDefinitions } from '../utils/timelineUtils';
+import { calculateMasterRange, normalizeTagDefinitions, pruneUnknownEventTags, sanitizeEventsForTagDefinitions } from '../utils/timelineUtils';
 
 const TimelineContext = createContext();
 
@@ -145,11 +145,12 @@ export function TimelineProvider({ children }) {
       // Local timeline - metadata is stored in localStorage, tracks/events are stored separately
       const storedTracks = loadLocalTracks(currentTimelineId);
       const derivedRange = calculateMasterRange(storedTracks);
+      const normalizedTagDefinitions = normalizeTagDefinitions(entry.tagDefinitions || []);
       const localData = {
         timeline: {
           title: entry.title,
           description: entry.description || '',
-          tagDefinitions: normalizeTagDefinitions(entry.tagDefinitions || []),
+          tagDefinitions: normalizedTagDefinitions,
           masterStart: derivedRange.start,
           masterEnd: derivedRange.end,
         },
@@ -157,22 +158,24 @@ export function TimelineProvider({ children }) {
         events: [],
       };
       setTimelineData(localData);
-      setLocalEvents(loadLocalEvents(currentTimelineId));
+      setLocalEvents(sanitizeEventsForTagDefinitions(loadLocalEvents(currentTimelineId), normalizedTagDefinitions));
       setLocalTracks(storedTracks);
       setLoading(false);
     } else {
       // Remote timeline - fetch from server
       fetchNoCacheJSON(`${process.env.PUBLIC_URL}/${entry.url}`)
         .then(data => {
+          const normalizedTagDefinitions = normalizeTagDefinitions(data.timeline?.tagDefinitions || []);
           const normalizedData = {
             ...data,
             timeline: {
               ...data.timeline,
-              tagDefinitions: normalizeTagDefinitions(data.timeline?.tagDefinitions || []),
+              tagDefinitions: normalizedTagDefinitions,
             },
+            events: sanitizeEventsForTagDefinitions(data.events || [], normalizedTagDefinitions),
           };
           setTimelineData(normalizedData);
-          setLocalEvents(loadLocalEvents(currentTimelineId));
+          setLocalEvents(sanitizeEventsForTagDefinitions(loadLocalEvents(currentTimelineId), normalizedTagDefinitions));
           setLocalTracks(loadLocalTracks(currentTimelineId));
           setLoading(false);
         })
@@ -271,10 +274,23 @@ export function TimelineProvider({ children }) {
       ...(tagDefinitions ? { tagDefinitions: normalizeTagDefinitions(tagDefinitions) } : {}),
     };
 
-    setTimelineData(prev => ({
-      ...prev,
-      timeline: { ...prev.timeline, ...normalizedUpdates }
-    }));
+    setTimelineData(prev => {
+      const nextTimeline = { ...prev.timeline, ...normalizedUpdates };
+      const nextTagDefinitions = nextTimeline.tagDefinitions || [];
+      return {
+        ...prev,
+        timeline: nextTimeline,
+        events: sanitizeEventsForTagDefinitions(prev.events || [], nextTagDefinitions),
+      };
+    });
+
+    if (tagDefinitions) {
+      setLocalEvents(prev => {
+        const next = sanitizeEventsForTagDefinitions(prev, normalizedUpdates.tagDefinitions || []);
+        saveLocalEvents(currentTimelineId, next);
+        return next;
+      });
+    }
 
     if (currentTimelineId?.startsWith('local-timeline-')) {
       setManifest(prev => {
@@ -349,7 +365,12 @@ export function TimelineProvider({ children }) {
 
   // Add a new event (can be a child of a period at any nesting level)
   const addEvent = useCallback((event, parentPeriodId = null) => {
-    const newEvent = { ...event, id: `local-${Date.now()}`, isLocal: true };
+    const newEvent = {
+      ...event,
+      id: `local-${Date.now()}`,
+      isLocal: true,
+      tags: pruneUnknownEventTags(event.tags || [], timelineData?.timeline?.tagDefinitions || []),
+    };
     
     if (parentPeriodId) {
       // Add as a child to a period event - search recursively
@@ -393,10 +414,13 @@ export function TimelineProvider({ children }) {
 
   // Update an event
   const updateEvent = useCallback((eventId, updates) => {
+    const normalizedUpdates = updates.tags
+      ? { ...updates, tags: pruneUnknownEventTags(updates.tags, timelineData?.timeline?.tagDefinitions || []) }
+      : updates;
     // Try updating in local events
     setLocalEvents(prev => {
       const next = JSON.parse(JSON.stringify(prev));
-      const found = findAndUpdateEvent(next, eventId, (event) => ({ ...event, ...updates }));
+      const found = findAndUpdateEvent(next, eventId, (event) => ({ ...event, ...normalizedUpdates }));
       if (found) {
         saveLocalEvents(currentTimelineId, next);
         return next;
@@ -407,7 +431,7 @@ export function TimelineProvider({ children }) {
     // Try updating in JSON data
     if (timelineData) {
       const eventsCopy = JSON.parse(JSON.stringify(timelineData.events || []));
-      const found = findAndUpdateEvent(eventsCopy, eventId, (event) => ({ ...event, ...updates }));
+      const found = findAndUpdateEvent(eventsCopy, eventId, (event) => ({ ...event, ...normalizedUpdates }));
       if (found) {
         setTimelineData({ ...timelineData, events: eventsCopy });
       }

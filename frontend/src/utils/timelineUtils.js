@@ -347,6 +347,25 @@ export function getUndefinedEventTags(tags = [], tagDefinitions = []) {
   return Array.from(new Set(unmatched));
 }
 
+export function pruneUnknownEventTags(tags = [], tagDefinitions = []) {
+  return getDefinedEventTagIds(tags, tagDefinitions);
+}
+
+export function sanitizeEventsForTagDefinitions(events = [], tagDefinitions = []) {
+  return events.map((event) => {
+    const nextEvent = {
+      ...event,
+      tags: pruneUnknownEventTags(event.tags || [], tagDefinitions),
+    };
+
+    if (event.children?.length) {
+      nextEvent.children = sanitizeEventsForTagDefinitions(event.children, tagDefinitions);
+    }
+
+    return nextEvent;
+  });
+}
+
 export function getReadableTextColor(backgroundColor) {
   const hex = String(backgroundColor || '').replace('#', '');
   if (![3, 6].includes(hex.length)) return '#ffffff';

@@ -1032,20 +1032,9 @@ function TrackRow({
                     ))}
                   </div>
                   {evt.resolvedTags.length > 0 && (
-                    <div className="mt-1 flex items-center justify-center gap-1">
-                      {evt.resolvedTags.slice(0, 3).map(tag => (
-                        <span
-                          key={`${evt.id}-tag-dot-${tag.id}`}
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: tag.color }}
-                          title={tag.label}
-                        />
-                      ))}
-                      {evt.resolvedTags.length > 3 && (
-                        <span className={`text-[8px] font-bold ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                          +{evt.resolvedTags.length - 3}
-                        </span>
-                      )}
+                    <div className={`mt-1 text-[8px] leading-tight text-center ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                      {evt.resolvedTags.slice(0, 3).map(tag => tag.label).join(' • ')}
+                      {evt.resolvedTags.length > 3 && ` +${evt.resolvedTags.length - 3} more`}
                     </div>
                   )}
                   <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
