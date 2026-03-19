@@ -10,6 +10,7 @@ import {
   formatYear,
   localToMaster,
   masterToLocal,
+  getReadableTextColor,
   getResolvedEventTags,
 } from '../utils/timelineUtils';
 import EventCard from './EventCard';
@@ -1032,9 +1033,22 @@ function TrackRow({
                     ))}
                   </div>
                   {evt.resolvedTags.length > 0 && (
-                    <div className={`mt-1 text-[8px] leading-tight text-center ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                      {evt.resolvedTags.slice(0, 3).map(tag => tag.label).join(' • ')}
-                      {evt.resolvedTags.length > 3 && ` +${evt.resolvedTags.length - 3} more`}
+                    <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 max-w-full">
+                      {evt.resolvedTags.slice(0, 3).map(tag => (
+                        <span
+                          key={`${evt.id}-visible-tag-${tag.id}`}
+                          className="px-2 py-0.5 text-[8px] font-bold max-w-full"
+                          style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
+                          title={tag.label}
+                        >
+                          {tag.label}
+                        </span>
+                      ))}
+                      {evt.resolvedTags.length > 3 && (
+                        <span className={`px-2 py-0.5 text-[8px] font-bold ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
+                          +{evt.resolvedTags.length - 3} more
+                        </span>
+                      )}
                     </div>
                   )}
                   <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
