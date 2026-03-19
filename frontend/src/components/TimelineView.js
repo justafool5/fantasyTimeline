@@ -27,8 +27,7 @@ const EVENT_LABEL_WIDTH = 220;
 const EVENT_LABEL_GUTTER = 12;
 const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
 const CLUSTER_DISTANCE_PX = 18;
-const CLUSTER_ZOOM_STEPS = 3;
-const ZOOM_STEP_FACTOR = 1.08;
+const CLUSTER_SPLIT_TARGET_PX = 28;
 const MIN_LABEL_WIDTH = 80;
 const TARGET_LABEL_LINE_LENGTH = 22;
 const ESTIMATED_CHAR_WIDTH = 6.5;
@@ -760,22 +759,37 @@ function TrackRow({
     return visibility;
   }, [clusteredItems]);
 
-  const zoomIntoCluster = useCallback((clusterEvents) => {
+  const zoomIntoCluster = useCallback((clusterEvents, clusterCenterX) => {
     if (!clusterEvents?.length || !scrollRef.current) return;
 
-    const clusterCenterX = clusterEvents.reduce((sum, evt) => sum + evt.x, 0) / clusterEvents.length;
     const viewport = scrollRef.current;
-    const viewportCenterBefore = clusterCenterX - viewport.scrollLeft;
-    const nextZoom = zoom * (ZOOM_STEP_FACTOR ** CLUSTER_ZOOM_STEPS);
-    const scaleFactor = nextZoom / zoom;
+    const viewportWidth = viewport.clientWidth;
+    const localPositions = clusterEvents.map(evt => evt.x - TRACK_CONTENT_START).sort((a, b) => a - b);
+
+    let tightestGap = Infinity;
+    for (let i = 1; i < localPositions.length; i += 1) {
+      tightestGap = Math.min(tightestGap, localPositions[i] - localPositions[i - 1]);
+    }
+
+    const gapScale = Number.isFinite(tightestGap) && tightestGap > 0
+      ? CLUSTER_SPLIT_TARGET_PX / tightestGap
+      : 2;
+    const spread = localPositions[localPositions.length - 1] - localPositions[0];
+    const spreadScale = spread > 0 ? Math.min(4, Math.max(1.4, 140 / spread)) : 2;
+    const scaleFactor = Math.max(1.4, gapScale, spreadScale);
+    const nextZoom = zoom * scaleFactor;
+    const centerRatio = clusterCenterX / Math.max(1, TRACK_CONTENT_START + totalWidth + TIMELINE_PADDING);
 
     setZoom(nextZoom);
 
     requestAnimationFrame(() => {
       if (!scrollRef.current) return;
-      scrollRef.current.scrollLeft = Math.max(0, clusterCenterX * scaleFactor - viewportCenterBefore);
+      const nextViewport = scrollRef.current;
+      const nextScrollWidth = nextViewport.scrollWidth;
+      const targetCenterX = centerRatio * nextScrollWidth;
+      nextViewport.scrollLeft = Math.max(0, targetCenterX - viewportWidth / 2);
     });
-  }, [scrollRef, setZoom, zoom]);
+  }, [scrollRef, setZoom, totalWidth, zoom]);
 
   return (
     <div
@@ -898,7 +912,7 @@ function TrackRow({
                 data-testid={`event-cluster-${track.id}-${index}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  zoomIntoCluster(clusterEvents);
+                  zoomIntoCluster(clusterEvents, clusterCenterX);
                 }}
                 className={`relative z-20 min-w-[28px] h-7 px-2 rounded-full text-[11px] font-bold transition-all duration-200 ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}
                 style={{
@@ -979,33 +993,39 @@ function TrackRow({
               title={isUndated ? `${evt.title} (undated - approximate position)` : evt.title}
             />
 
-            {showLabel && (
-              <div
-                className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
-                style={{
-                  ...(evt.above ? { bottom: 16, marginBottom: evt.hasImage ? 58 : 38 } : { top: 16, marginTop: evt.hasImage ? 58 : 38 }),
-                  width: evt.labelWidth,
-                  maxWidth: EVENT_LABEL_WIDTH,
-                }}
-              >
-                {evt.hasImage && (
-                  <div
-                    className={`w-8 h-8 rounded-full overflow-hidden mb-1 ${isUndated ? 'opacity-70' : ''}`}
-                    style={{ border: `2px ${isUndated ? 'dashed' : 'solid'} ${track.color}40` }}
-                  >
-                    <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+            <div
+              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
+              style={{
+                ...(evt.above ? { bottom: 16, marginBottom: evt.hasImage ? 58 : 38 } : { top: 16, marginTop: evt.hasImage ? 58 : 38 }),
+                width: showLabel ? evt.labelWidth : MIN_LABEL_WIDTH,
+                maxWidth: EVENT_LABEL_WIDTH,
+              }}
+            >
+              {showLabel ? (
+                <>
+                  {evt.hasImage && (
+                    <div
+                      className={`w-8 h-8 rounded-full overflow-hidden mb-1 ${isUndated ? 'opacity-70' : ''}`}
+                      style={{ border: `2px ${isUndated ? 'dashed' : 'solid'} ${track.color}40` }}
+                    >
+                      <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                  )}
+                  <div className={`text-[10px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
+                    {evt.titleLines.map((line, lineIndex) => (
+                      <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
+                    ))}
                   </div>
-                )}
-                <div className={`text-[10px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
-                  {evt.titleLines.map((line, lineIndex) => (
-                    <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
-                  ))}
+                  <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                    {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
+                  </div>
+                </>
+              ) : (
+                <div className={`text-[12px] font-bold tracking-wide text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
+                  ...
                 </div>
-                <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                  {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         );
       })}
