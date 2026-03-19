@@ -23,7 +23,9 @@ const MIN_ZOOM = 0.1;
 const TIMELINE_PADDING = 120;
 const TRACK_HEIGHT = 180;
 const AXIS_OFFSET = 100;
-const MARKER_AREA_HEIGHT = 60;
+const EVENT_LABEL_MAX_CHARS = 40;
+const EVENT_LABEL_WIDTH = 220;
+const EVENT_LABEL_GUTTER = 12;
 
 export default function TimelineView() {
   const {
@@ -519,7 +521,6 @@ function TrackRow({
 }) {
   const axisRef = useRef(null);
   const topOffset = trackIndex * TRACK_HEIGHT + 20;
-  const axisY = topOffset + AXIS_OFFSET;
 
   // Generate year markers for this track
   const yearMarkers = useMemo(() => {
@@ -740,6 +741,11 @@ function TrackRow({
         const x = (masterYear - masterRange.start) * pixelsPerYear;
         const isExpanded = expandedEvent === evt.id;
         const hasImage = !!evt.image;
+        const displayTitle = (evt.title || '').slice(0, EVENT_LABEL_MAX_CHARS);
+        const labelHalfWidth = EVENT_LABEL_WIDTH / 2;
+        const minMarkerX = labelHalfWidth + EVENT_LABEL_GUTTER;
+        const maxMarkerX = Math.max(minMarkerX, totalWidth - labelHalfWidth - EVENT_LABEL_GUTTER);
+        const safeX = Math.min(Math.max(x, minMarkerX), maxMarkerX);
 
         return (
           <div
@@ -747,7 +753,7 @@ function TrackRow({
             data-interactive="true"
             className="absolute transition-all"
             style={{
-              left: x,
+              left: safeX,
               top: AXIS_OFFSET,
               transform: 'translateX(-50%)',
               zIndex: isExpanded ? 20 : 10,
@@ -804,7 +810,11 @@ function TrackRow({
             {/* Thumbnail + label */}
             <div
               className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
-              style={evt.above ? { bottom: 16, marginBottom: hasImage ? 58 : 38 } : { top: 16, marginTop: hasImage ? 58 : 38 }}
+              style={{
+                ...(evt.above ? { bottom: 16, marginBottom: hasImage ? 58 : 38 } : { top: 16, marginTop: hasImage ? 58 : 38 }),
+                width: EVENT_LABEL_WIDTH,
+                maxWidth: EVENT_LABEL_WIDTH,
+              }}
             >
               {hasImage && (
                 <div
@@ -814,8 +824,8 @@ function TrackRow({
                   <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
                 </div>
               )}
-              <div className={`text-[10px] font-bold leading-tight max-w-[100px] text-center truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
-                {evt.title}
+              <div className={`text-[10px] font-bold leading-tight text-center whitespace-normal break-words ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
+                {displayTitle}
               </div>
               <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
                 {isUndated ? '(undated)' : `${formatYear(year)} ${track.abbr}`}
@@ -842,6 +852,7 @@ function CrossTrackEvent({
   const isPeriod = event.type === 'period';
   const masterYear = isPeriod ? event.masterStartDate.year : event.masterDate.year;
   const x = (masterYear - masterRange.start) * pixelsPerYear + 20; // Reduced padding since sidebar handles it
+  const displayTitle = (event.title || '').slice(0, EVENT_LABEL_MAX_CHARS);
   
   let width = 4;
   if (isPeriod) {
@@ -885,14 +896,14 @@ function CrossTrackEvent({
 
       {/* Label */}
       <div
-        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap transition-all pointer-events-auto"
-        style={{ top: -25 }}
+        className="absolute left-1/2 -translate-x-1/2 transition-all pointer-events-auto"
+        style={{ top: -25, width: EVENT_LABEL_WIDTH, maxWidth: EVENT_LABEL_WIDTH }}
       >
         <div
-          className={`px-2 py-1 text-[10px] font-bold text-center ${theme === 'fantasy' ? 'font-fantasy-heading bg-fantasy-card border border-fantasy-border' : 'font-scifi-heading bg-scifi-bg-secondary border border-scifi-border'}`}
+          className={`px-2 py-1 text-[10px] font-bold text-center whitespace-normal break-words ${theme === 'fantasy' ? 'font-fantasy-heading bg-fantasy-card border border-fantasy-border' : 'font-scifi-heading bg-scifi-bg-secondary border border-scifi-border'}`}
           style={{ color: crossTrackColor }}
         >
-          {event.title}
+          {displayTitle}
         </div>
       </div>
     </div>
