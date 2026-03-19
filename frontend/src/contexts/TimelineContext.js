@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { calculateMasterRange } from '../utils/timelineUtils';
+import { calculateMasterRange, normalizeTagDefinitions } from '../utils/timelineUtils';
 
 const TimelineContext = createContext();
 
@@ -149,6 +149,7 @@ export function TimelineProvider({ children }) {
         timeline: {
           title: entry.title,
           description: entry.description || '',
+          tagDefinitions: normalizeTagDefinitions(entry.tagDefinitions || []),
           masterStart: derivedRange.start,
           masterEnd: derivedRange.end,
         },
@@ -163,7 +164,14 @@ export function TimelineProvider({ children }) {
       // Remote timeline - fetch from server
       fetchNoCacheJSON(`${process.env.PUBLIC_URL}/${entry.url}`)
         .then(data => {
-          setTimelineData(data);
+          const normalizedData = {
+            ...data,
+            timeline: {
+              ...data.timeline,
+              tagDefinitions: normalizeTagDefinitions(data.timeline?.tagDefinitions || []),
+            },
+          };
+          setTimelineData(normalizedData);
           setLocalEvents(loadLocalEvents(currentTimelineId));
           setLocalTracks(loadLocalTracks(currentTimelineId));
           setLoading(false);
@@ -257,11 +265,15 @@ export function TimelineProvider({ children }) {
   const updateTimelineMeta = useCallback((updates) => {
     if (!timelineData) return;
 
-    const { masterStart, masterEnd, ...safeUpdates } = updates;
+    const { masterStart, masterEnd, tagDefinitions, ...safeUpdates } = updates;
+    const normalizedUpdates = {
+      ...safeUpdates,
+      ...(tagDefinitions ? { tagDefinitions: normalizeTagDefinitions(tagDefinitions) } : {}),
+    };
 
     setTimelineData(prev => ({
       ...prev,
-      timeline: { ...prev.timeline, ...safeUpdates }
+      timeline: { ...prev.timeline, ...normalizedUpdates }
     }));
 
     if (currentTimelineId?.startsWith('local-timeline-')) {
@@ -269,7 +281,7 @@ export function TimelineProvider({ children }) {
         if (!prev) return prev;
         return {
           ...prev,
-          timelines: prev.timelines.map(t => t.id === currentTimelineId ? { ...t, ...safeUpdates } : t)
+          timelines: prev.timelines.map(t => t.id === currentTimelineId ? { ...t, ...normalizedUpdates } : t)
         };
       });
     }
@@ -499,6 +511,7 @@ export function TimelineProvider({ children }) {
       title,
       description: description || '',
       defaultTheme: defaultTheme || 'fantasy',
+      tagDefinitions: [],
       masterStart: initialRange.start,
       masterEnd: initialRange.end,
       isLocal: true,

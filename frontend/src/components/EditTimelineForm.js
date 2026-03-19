@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
-import { X, Save, Trash2 } from 'lucide-react';
+import { X, Save, Trash2, Tags } from 'lucide-react';
 
-export default function EditTimelineForm({ onClose }) {
+export default function EditTimelineForm({ onClose, onEditTags }) {
   const { timelineMeta, updateTimelineMeta, clearLocalData, localEvents, localTracks } = useTimeline();
   const { theme } = useTheme();
 
@@ -102,6 +102,28 @@ export default function EditTimelineForm({ onClose }) {
             className={`${inputClass} h-24 resize-none`}
             placeholder="Describe this timeline..."
           />
+        </div>
+
+        {/* Tag Definitions */}
+        <div className="mb-4">
+          <label className={labelClass}>Timeline Tags</label>
+          <div className={`p-3 ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30' : 'bg-scifi-bg/50 border border-scifi-border/30'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                {timelineMeta?.tagDefinitions?.length
+                  ? `${timelineMeta.tagDefinitions.length} canonical tag definition(s) configured.`
+                  : 'No canonical tags defined yet.'}
+              </p>
+              <button
+                type="button"
+                data-testid="edit-tag-definitions-btn"
+                onClick={onEditTags}
+                className={`flex items-center gap-2 px-3 py-2 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/10 text-fantasy-accent border border-fantasy-accent/30 font-fantasy-heading hover:bg-fantasy-accent/20' : 'bg-scifi-accent/10 text-scifi-accent border border-scifi-accent/30 font-scifi-heading hover:bg-scifi-accent/20'}`}
+              >
+                <Tags size={14} /> Edit Tags
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Derived Range */}

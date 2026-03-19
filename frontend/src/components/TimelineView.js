@@ -10,12 +10,14 @@ import {
   formatYear,
   localToMaster,
   masterToLocal,
+  getResolvedEventTags,
 } from '../utils/timelineUtils';
 import EventCard from './EventCard';
 import AddEventForm from './AddEventForm';
 import AddTrackForm from './AddTrackForm';
 import EditTrackForm from './EditTrackForm';
 import EditTimelineForm from './EditTimelineForm';
+import EditTagDefinitionsForm from './EditTagDefinitionsForm';
 import { Plus, ArrowLeft, Settings, Pencil } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
@@ -90,6 +92,7 @@ export default function TimelineView() {
   const [showAddTrack, setShowAddTrack] = useState(false);
   const [editingTrack, setEditingTrack] = useState(null); // track object to edit
   const [showEditTimeline, setShowEditTimeline] = useState(false);
+  const [showEditTagDefinitions, setShowEditTagDefinitions] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const hasDraggedRef = useRef(false);
   const isScrollingRef = useRef(false);
@@ -514,7 +517,14 @@ export default function TimelineView() {
       {/* Edit Timeline Form Modal */}
       <AnimatePresence>
         {showEditTimeline && (
-          <EditTimelineForm onClose={() => setShowEditTimeline(false)} />
+          <EditTimelineForm onClose={() => setShowEditTimeline(false)} onEditTags={() => setShowEditTagDefinitions(true)} />
+        )}
+      </AnimatePresence>
+
+      {/* Edit Tag Definitions Modal */}
+      <AnimatePresence>
+        {showEditTagDefinitions && (
+          <EditTagDefinitionsForm onClose={() => setShowEditTagDefinitions(false)} />
         )}
       </AnimatePresence>
     </div>
@@ -566,7 +576,7 @@ function TrackRow({
   theme,
   showHeader = true,
 }) {
-  const { setZoom, scrollRef } = useTimeline();
+  const { setZoom, scrollRef, timelineMeta } = useTimeline();
   const axisRef = useRef(null);
   const topOffset = trackIndex * TRACK_HEIGHT + 20;
 
@@ -711,9 +721,10 @@ function TrackRow({
         titleLines,
         labelWidth,
         hasImage: !!evt.image,
+        resolvedTags: getResolvedEventTags(evt.tags || [], timelineMeta?.tagDefinitions || [], theme),
       };
     }).filter(Boolean);
-  }, [sortedEvents, track, masterRange, pixelsPerYear]);
+  }, [sortedEvents, track, masterRange, pixelsPerYear, timelineMeta?.tagDefinitions, theme]);
 
   const clusteredItems = useMemo(() => {
     if (positionedEvents.length === 0) return [];
@@ -1020,13 +1031,49 @@ function TrackRow({
                       <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
                     ))}
                   </div>
+                  {evt.resolvedTags.length > 0 && (
+                    <div className="mt-1 flex items-center justify-center gap-1">
+                      {evt.resolvedTags.slice(0, 3).map(tag => (
+                        <span
+                          key={`${evt.id}-tag-dot-${tag.id}`}
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                          title={tag.label}
+                        />
+                      ))}
+                      {evt.resolvedTags.length > 3 && (
+                        <span className={`text-[8px] font-bold ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                          +{evt.resolvedTags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
                     {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
                   </div>
                 </>
               ) : (
-                <div className={`text-[12px] font-bold tracking-wide text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
-                  ...
+                <div className="flex flex-col items-center gap-1">
+                  <div className={`text-[12px] font-bold tracking-wide text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
+                    ...
+                  </div>
+                  {evt.resolvedTags.length > 0 && (
+                    <div className="flex items-center justify-center gap-1">
+                      {evt.resolvedTags.slice(0, 3).map(tag => (
+                        <span
+                          key={`${evt.id}-hidden-tag-dot-${tag.id}`}
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                          title={tag.label}
+                        />
+                      ))}
+                      {evt.resolvedTags.length > 3 && (
+                        <span className={`text-[8px] font-bold ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                          +{evt.resolvedTags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

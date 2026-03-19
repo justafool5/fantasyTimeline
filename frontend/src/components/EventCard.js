@@ -3,12 +3,12 @@ import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
 import { X, MapPin, Trash2, Pencil, Save, XCircle, Globe, Layers, HelpCircle } from 'lucide-react';
-import { formatYear, getTagColor, masterToLocal } from '../utils/timelineUtils';
+import { formatYear, getReadableTextColor, getResolvedEventTags, masterToLocal } from '../utils/timelineUtils';
 
 const EVENT_TITLE_MAX_LENGTH = 40;
 
 export default function EventCard({ event, tracks, onClose, onDrillIn }) {
-  const { updateEvent, deleteEvent, allEvents } = useTimeline();
+  const { updateEvent, deleteEvent, allEvents, timelineMeta } = useTimeline();
   const { theme } = useTheme();
   const [editing, setEditing] = useState(false);
 
@@ -72,7 +72,7 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
       title: event.title,
       description: event.description || '',
       image: event.image || '',
-      tags: (event.tags || []).join(', '),
+      selectedTags: event.tags || [],
     };
 
     if (isUndated) {
@@ -107,7 +107,7 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
       title: normalizedTitle,
       description: form.description.trim(),
       image: form.image.trim() || null,
-      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: form.selectedTags,
     };
 
     // Update date fields based on event type
@@ -139,6 +139,8 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
       deleteEvent(event.id);
     }
   };
+
+  const resolvedTags = useMemo(() => getResolvedEventTags(event.tags || [], timelineMeta?.tagDefinitions || [], theme), [event.tags, timelineMeta?.tagDefinitions, theme]);
 
   const inputClass = theme === 'fantasy'
     ? 'bg-fantasy-bg border border-fantasy-border/60 text-fantasy-text font-fantasy-body px-2 py-1.5 w-full text-sm focus:outline-none focus:border-fantasy-accent'
@@ -457,31 +459,52 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
         <div className="px-5 pb-4 relative z-10">
           {editing ? (
             <>
-              <label className={labelClass}>Tags (comma-separated)</label>
-              <input
-                data-testid="edit-tags-input"
-                type="text"
-                value={form.tags}
-                onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-                className={inputClass}
-                placeholder="war, magic, discovery"
-              />
+              <label className={labelClass}>Tags</label>
+              {timelineMeta?.tagDefinitions?.length ? (
+                <div className="flex flex-wrap gap-2" data-testid="edit-tags-input">
+                  {timelineMeta.tagDefinitions.map(tag => {
+                    const isSelected = form.selectedTags.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        data-testid={`edit-tag-option-${tag.id}`}
+                        onClick={() => setForm(f => ({
+                          ...f,
+                          selectedTags: isSelected
+                            ? f.selectedTags.filter(existingTagId => existingTagId !== tag.id)
+                            : [...f.selectedTags, tag.id]
+                        }))}
+                        className={`px-3 py-1.5 text-xs font-bold border transition-all ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}
+                        style={{
+                          backgroundColor: isSelected ? tag.color : 'transparent',
+                          color: isSelected ? getReadableTextColor(tag.color) : tag.color,
+                          borderColor: tag.color,
+                        }}
+                      >
+                        {tag.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={`p-3 text-xs ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30 text-fantasy-muted' : 'bg-scifi-bg/50 border border-scifi-border/30 text-scifi-muted'}`}>
+                  No timeline tags are defined yet.
+                </div>
+              )}
             </>
-          ) : event.tags && event.tags.length > 0 ? (
+          ) : resolvedTags.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
-              {event.tags.map(tag => {
-                const color = getTagColor(tag, theme);
-                return (
-                  <span
-                    key={tag}
-                    data-testid={`tag-${tag}`}
-                    className="px-2 py-0.5 text-xs font-bold"
-                    style={{ backgroundColor: color.bg, color: color.text }}
-                  >
-                    {tag}
-                  </span>
-                );
-              })}
+              {resolvedTags.map(tag => (
+                <span
+                  key={tag.id}
+                  data-testid={`tag-${tag.id}`}
+                  className="px-2 py-0.5 text-xs font-bold"
+                  style={{ backgroundColor: tag.color, color: tag.textColor }}
+                >
+                  {tag.label}
+                </span>
+              ))}
             </div>
           ) : null}
         </div>
