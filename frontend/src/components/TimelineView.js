@@ -26,6 +26,49 @@ const AXIS_OFFSET = 100;
 const EVENT_LABEL_WIDTH = 220;
 const EVENT_LABEL_GUTTER = 12;
 const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
+const CLUSTER_DISTANCE_PX = 18;
+const CLUSTER_ZOOM_STEPS = 3;
+const ZOOM_STEP_FACTOR = 1.08;
+const MIN_LABEL_WIDTH = 80;
+const TARGET_LABEL_LINE_LENGTH = 22;
+const ESTIMATED_CHAR_WIDTH = 6.5;
+
+function splitTitleLines(title) {
+  const normalized = (title || '').trim();
+  if (!normalized) return [''];
+
+  const words = normalized.split(/\s+/);
+  if (words.length <= 1 || normalized.length <= TARGET_LABEL_LINE_LENGTH) {
+    return [normalized];
+  }
+
+  let bestLines = [normalized];
+  let bestScore = Infinity;
+
+  for (let i = 1; i < words.length; i += 1) {
+    const firstLine = words.slice(0, i).join(' ');
+    const secondLine = words.slice(i).join(' ');
+    const longestLine = Math.max(firstLine.length, secondLine.length);
+    const balancePenalty = Math.abs(firstLine.length - secondLine.length);
+    const overflowPenalty = Math.max(0, longestLine - TARGET_LABEL_LINE_LENGTH) * 4;
+    const score = balancePenalty + overflowPenalty;
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestLines = [firstLine, secondLine];
+    }
+  }
+
+  return bestLines;
+}
+
+function estimateLabelWidth(lines) {
+  const longestLineLength = lines.reduce((max, line) => Math.max(max, line.length), 0);
+  return Math.max(
+    MIN_LABEL_WIDTH,
+    Math.min(EVENT_LABEL_WIDTH, longestLineLength * ESTIMATED_CHAR_WIDTH + 18)
+  );
+}
 
 export default function TimelineView() {
   const {
@@ -351,6 +394,7 @@ export default function TimelineView() {
                 masterRange={effectiveMasterRange}
                 pixelsPerYear={pixelsPerYear}
                 totalWidth={totalWidth}
+                zoom={zoom}
                 expandedEvent={expandedEvent}
                 setExpandedEvent={setExpandedEvent}
                 onAxisClick={handleTrackAxisClick}
@@ -370,6 +414,7 @@ export default function TimelineView() {
                     masterRange={effectiveMasterRange}
                     pixelsPerYear={pixelsPerYear}
                     totalWidth={totalWidth}
+                    zoom={zoom}
                     expandedEvent={expandedEvent}
                     setExpandedEvent={setExpandedEvent}
                     onAxisClick={handleTrackAxisClick}
@@ -515,12 +560,14 @@ function TrackRow({
   masterRange,
   pixelsPerYear,
   totalWidth,
+  zoom,
   expandedEvent,
   setExpandedEvent,
   onAxisClick,
   theme,
   showHeader = true,
 }) {
+  const { setZoom, scrollRef } = useTimeline();
   const axisRef = useRef(null);
   const topOffset = trackIndex * TRACK_HEIGHT + 20;
 
@@ -630,6 +677,106 @@ function TrackRow({
 
   const periodEvents = sortedEvents.filter(e => e.type === 'period');
 
+  const positionedEvents = useMemo(() => {
+    return sortedEvents.map((evt) => {
+      const isCrossTrackEvent = evt.trackId === null;
+      const isUndated = evt.type === 'undated';
+      let year;
+      let masterYear;
+
+      if (isUndated) {
+        masterYear = evt._calculatedYear;
+        year = masterToLocal(masterYear, track);
+      } else if (isCrossTrackEvent) {
+        masterYear = evt.type === 'point' ? evt.masterDate?.year : evt.masterStartDate?.year;
+        year = masterToLocal(masterYear, track);
+      } else {
+        year = evt.type === 'point' ? evt.date?.year : evt.startDate?.year;
+        masterYear = localToMaster(year, track);
+      }
+
+      if (masterYear === undefined || masterYear === null) return null;
+
+      const titleLines = splitTitleLines(evt.title || '');
+      const labelWidth = estimateLabelWidth(titleLines);
+
+      return {
+        ...evt,
+        year,
+        masterYear,
+        x: TRACK_CONTENT_START + (masterYear - masterRange.start) * pixelsPerYear,
+        titleLines,
+        labelWidth,
+        hasImage: !!evt.image,
+      };
+    }).filter(Boolean);
+  }, [sortedEvents, track, masterRange, pixelsPerYear]);
+
+  const clusteredItems = useMemo(() => {
+    if (positionedEvents.length === 0) return [];
+
+    const items = [];
+    let currentCluster = [positionedEvents[0]];
+
+    for (let i = 1; i < positionedEvents.length; i += 1) {
+      const evt = positionedEvents[i];
+      const previous = currentCluster[currentCluster.length - 1];
+      if (evt.x - previous.x <= CLUSTER_DISTANCE_PX) {
+        currentCluster.push(evt);
+      } else {
+        items.push(currentCluster.length > 1 ? { type: 'cluster', events: currentCluster } : { type: 'event', event: currentCluster[0] });
+        currentCluster = [evt];
+      }
+    }
+
+    items.push(currentCluster.length > 1 ? { type: 'cluster', events: currentCluster } : { type: 'event', event: currentCluster[0] });
+    return items;
+  }, [positionedEvents]);
+
+  const labelVisibility = useMemo(() => {
+    const visibility = new Map();
+    const rows = { above: [], below: [] };
+
+    clusteredItems.forEach((item) => {
+      if (item.type !== 'event') return;
+      const evt = item.event;
+      const key = evt.above ? 'above' : 'below';
+      rows[key].push(evt);
+    });
+
+    ['above', 'below'].forEach((key) => {
+      let lastRightEdge = -Infinity;
+      rows[key].forEach((evt) => {
+        const left = evt.x - evt.labelWidth / 2;
+        const right = evt.x + evt.labelWidth / 2;
+        const isVisible = left >= lastRightEdge + EVENT_LABEL_GUTTER;
+        visibility.set(evt.id, isVisible);
+        if (isVisible) {
+          lastRightEdge = right;
+        }
+      });
+    });
+
+    return visibility;
+  }, [clusteredItems]);
+
+  const zoomIntoCluster = useCallback((clusterEvents) => {
+    if (!clusterEvents?.length || !scrollRef.current) return;
+
+    const clusterCenterX = clusterEvents.reduce((sum, evt) => sum + evt.x, 0) / clusterEvents.length;
+    const viewport = scrollRef.current;
+    const viewportCenterBefore = clusterCenterX - viewport.scrollLeft;
+    const nextZoom = zoom * (ZOOM_STEP_FACTOR ** CLUSTER_ZOOM_STEPS);
+    const scaleFactor = nextZoom / zoom;
+
+    setZoom(nextZoom);
+
+    requestAnimationFrame(() => {
+      if (!scrollRef.current) return;
+      scrollRef.current.scrollLeft = Math.max(0, clusterCenterX * scaleFactor - viewportCenterBefore);
+    });
+  }, [scrollRef, setZoom, zoom]);
+
   return (
     <div
       className="absolute"
@@ -718,33 +865,61 @@ function TrackRow({
       })}
 
       {/* Event markers */}
-      {sortedEvents.map(evt => {
-        // Handle both track-specific and cross-track events
-        const isCrossTrackEvent = evt.trackId === null;
-        const isUndated = evt.type === 'undated';
-        let year, masterYear;
-        
-        if (isUndated) {
-          // Undated event uses calculated year from anchor positions
-          masterYear = evt._calculatedYear;
-          year = masterToLocal(masterYear, track);
-        } else if (isCrossTrackEvent) {
-          // Cross-track event uses masterDate/masterStartDate
-          masterYear = evt.type === 'point' ? evt.masterDate?.year : evt.masterStartDate?.year;
-          year = masterToLocal(masterYear, track); // Convert to local for display
-        } else {
-          // Track-specific event uses date/startDate
-          year = evt.type === 'point' ? evt.date?.year : evt.startDate?.year;
-          masterYear = localToMaster(year, track);
+      {clusteredItems.map((item, index) => {
+        if (item.type === 'cluster') {
+          const clusterEvents = item.events;
+          const clusterCenterX = clusterEvents.reduce((sum, evt) => sum + evt.x, 0) / clusterEvents.length;
+          const clusterAbove = clusterEvents.filter(evt => evt.above).length >= clusterEvents.length / 2;
+
+          return (
+            <div
+              key={`cluster-${track.id}-${index}`}
+              data-interactive="true"
+              className="absolute transition-all"
+              style={{
+                left: clusterCenterX,
+                top: AXIS_OFFSET,
+                transform: 'translateX(-50%)',
+                zIndex: 18,
+              }}
+            >
+              <div
+                className="absolute left-1/2 -translate-x-1/2"
+                style={{
+                  backgroundColor: `${track.color}55`,
+                  width: 2,
+                  ...(clusterAbove
+                    ? { bottom: 0, height: 54 }
+                    : { top: 0, height: 54 }
+                  ),
+                }}
+              />
+              <button
+                data-testid={`event-cluster-${track.id}-${index}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  zoomIntoCluster(clusterEvents);
+                }}
+                className={`relative z-20 min-w-[28px] h-7 px-2 rounded-full text-[11px] font-bold transition-all duration-200 ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}
+                style={{
+                  backgroundColor: theme === 'fantasy' ? '#1e160d' : '#050510',
+                  color: track.color,
+                  border: `2px solid ${track.color}`,
+                  boxShadow: theme === 'scifi' ? `0 0 10px ${track.color}` : `0 2px 10px ${track.color}30`,
+                  marginTop: -10,
+                }}
+                title={`Zoom into ${clusterEvents.length} nearby events`}
+              >
+                {clusterEvents.length}
+              </button>
+            </div>
+          );
         }
-        
-        if (masterYear === undefined) return null; // Skip invalid events
-        
-        const rawX = (masterYear - masterRange.start) * pixelsPerYear;
-        const x = TRACK_CONTENT_START + rawX;
+
+        const evt = item.event;
+        const isUndated = evt.type === 'undated';
         const isExpanded = expandedEvent === evt.id;
-        const hasImage = !!evt.image;
-        const displayTitle = evt.title || '';
+        const showLabel = labelVisibility.get(evt.id);
 
         return (
           <div
@@ -752,13 +927,12 @@ function TrackRow({
             data-interactive="true"
             className="absolute transition-all"
             style={{
-              left: x,
+              left: evt.x,
               top: AXIS_OFFSET,
               transform: 'translateX(-50%)',
               zIndex: isExpanded ? 20 : 10,
             }}
           >
-            {/* Connector line - dashed for undated events */}
             <div
               className="absolute left-1/2 -translate-x-1/2"
               style={{
@@ -766,13 +940,12 @@ function TrackRow({
                 borderLeft: isUndated ? `1px dashed ${track.color}60` : 'none',
                 width: isUndated ? 0 : 1,
                 ...(evt.above
-                  ? { bottom: 0, height: hasImage ? 70 : 50 }
-                  : { top: 0, height: hasImage ? 70 : 50 }
+                  ? { bottom: 0, height: evt.hasImage ? 70 : 50 }
+                  : { top: 0, height: evt.hasImage ? 70 : 50 }
                 ),
               }}
             />
 
-            {/* Marker dot - fuzzy/dashed ring for undated events */}
             <button
               data-testid={`event-marker-${evt.id}`}
               onClick={(e) => {
@@ -780,25 +953,25 @@ function TrackRow({
                 setExpandedEvent(isExpanded ? null : evt.id);
               }}
               className={`relative z-20 transition-all duration-200 ${
-                isUndated 
+                isUndated
                   ? 'w-4 h-4 rounded-full hover:scale-125'
-                  : theme === 'fantasy' 
-                    ? 'w-3 h-3 rounded-full border-2 hover:scale-150' 
+                  : theme === 'fantasy'
+                    ? 'w-3 h-3 rounded-full border-2 hover:scale-150'
                     : 'w-3 h-3 rotate-45 border hover:scale-150'
               }`}
               style={{
-                backgroundColor: isUndated 
-                  ? `${track.color}30` 
-                  : evt.type === 'period' 
-                    ? track.color 
+                backgroundColor: isUndated
+                  ? `${track.color}30`
+                  : evt.type === 'period'
+                    ? track.color
                     : (theme === 'fantasy' ? track.color : '#050510'),
                 borderColor: track.color,
                 borderWidth: isUndated ? 2 : undefined,
                 borderStyle: isUndated ? 'dashed' : 'solid',
-                boxShadow: isUndated 
-                  ? `0 0 12px ${track.color}40` 
-                  : theme === 'scifi' 
-                    ? `0 0 8px ${track.color}` 
+                boxShadow: isUndated
+                  ? `0 0 12px ${track.color}40`
+                  : theme === 'scifi'
+                    ? `0 0 8px ${track.color}`
                     : 'none',
                 marginTop: isUndated ? -8 : -6,
                 transform: isExpanded ? 'scale(1.5)' : undefined,
@@ -806,30 +979,33 @@ function TrackRow({
               title={isUndated ? `${evt.title} (undated - approximate position)` : evt.title}
             />
 
-            {/* Thumbnail + label */}
-            <div
-              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
-              style={{
-                ...(evt.above ? { bottom: 16, marginBottom: hasImage ? 58 : 38 } : { top: 16, marginTop: hasImage ? 58 : 38 }),
-                width: EVENT_LABEL_WIDTH,
-                maxWidth: EVENT_LABEL_WIDTH,
-              }}
-            >
-              {hasImage && (
-                <div
-                  className={`w-8 h-8 rounded-full overflow-hidden mb-1 ${isUndated ? 'opacity-70' : ''}`}
-                  style={{ border: `2px ${isUndated ? 'dashed' : 'solid'} ${track.color}40` }}
-                >
-                  <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+            {showLabel && (
+              <div
+                className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
+                style={{
+                  ...(evt.above ? { bottom: 16, marginBottom: evt.hasImage ? 58 : 38 } : { top: 16, marginTop: evt.hasImage ? 58 : 38 }),
+                  width: evt.labelWidth,
+                  maxWidth: EVENT_LABEL_WIDTH,
+                }}
+              >
+                {evt.hasImage && (
+                  <div
+                    className={`w-8 h-8 rounded-full overflow-hidden mb-1 ${isUndated ? 'opacity-70' : ''}`}
+                    style={{ border: `2px ${isUndated ? 'dashed' : 'solid'} ${track.color}40` }}
+                  >
+                    <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                )}
+                <div className={`text-[10px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
+                  {evt.titleLines.map((line, lineIndex) => (
+                    <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
+                  ))}
                 </div>
-              )}
-              <div className={`text-[10px] font-bold leading-tight text-center whitespace-normal break-words ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
-                {displayTitle}
+                <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                  {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
+                </div>
               </div>
-              <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                {isUndated ? '(undated)' : `${formatYear(year)} ${track.abbr}`}
-              </div>
-            </div>
+            )}
           </div>
         );
       })}
