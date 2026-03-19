@@ -31,6 +31,7 @@ const EVENT_LABEL_GUTTER = 12;
 const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
 const CLUSTER_DISTANCE_PX = 18;
 const CLUSTER_SPLIT_TARGET_PX = 28;
+const CLUSTER_STACK_EPSILON_PX = 0.5;
 const MIN_LABEL_WIDTH = 80;
 const TARGET_LABEL_LINE_LENGTH = 22;
 const ESTIMATED_CHAR_WIDTH = 6.5;
@@ -580,6 +581,7 @@ function TrackRow({
   const { setZoom, scrollRef, timelineMeta } = useTimeline();
   const axisRef = useRef(null);
   const topOffset = trackIndex * TRACK_HEIGHT + 20;
+  const [expandedClusterKey, setExpandedClusterKey] = useState(null);
 
   // Generate year markers for this track
   const yearMarkers = useMemo(() => {
@@ -730,6 +732,26 @@ function TrackRow({
   const clusteredItems = useMemo(() => {
     if (positionedEvents.length === 0) return [];
 
+    const buildClusterItem = (clusterEvents) => {
+      if (clusterEvents.length === 1) {
+        return { type: 'event', event: clusterEvents[0] };
+      }
+
+      const sortedClusterEvents = [...clusterEvents].sort((a, b) => a.x - b.x);
+      const firstX = sortedClusterEvents[0].x;
+      const samePosition = sortedClusterEvents.every(evt => Math.abs(evt.x - firstX) <= CLUSTER_STACK_EPSILON_PX);
+      const sameYear = sortedClusterEvents.every(evt => evt.type !== 'undated' && evt.year === sortedClusterEvents[0].year);
+      const stackable = samePosition && sameYear;
+
+      return {
+        type: 'cluster',
+        events: sortedClusterEvents,
+        stackable,
+        clusterKey: sortedClusterEvents.map(evt => evt.id).join('::'),
+        stackLabel: stackable ? `${sortedClusterEvents.length} events in year ${formatYear(sortedClusterEvents[0].year)}` : null,
+      };
+    };
+
     const items = [];
     let currentCluster = [positionedEvents[0]];
 
@@ -739,12 +761,12 @@ function TrackRow({
       if (evt.x - previous.x <= CLUSTER_DISTANCE_PX) {
         currentCluster.push(evt);
       } else {
-        items.push(currentCluster.length > 1 ? { type: 'cluster', events: currentCluster } : { type: 'event', event: currentCluster[0] });
+        items.push(buildClusterItem(currentCluster));
         currentCluster = [evt];
       }
     }
 
-    items.push(currentCluster.length > 1 ? { type: 'cluster', events: currentCluster } : { type: 'event', event: currentCluster[0] });
+    items.push(buildClusterItem(currentCluster));
     return items;
   }, [positionedEvents]);
 
@@ -774,6 +796,14 @@ function TrackRow({
 
     return visibility;
   }, [clusteredItems]);
+
+  useEffect(() => {
+    if (!expandedClusterKey) return;
+    const clusterStillExists = clusteredItems.some(item => item.type === 'cluster' && item.clusterKey === expandedClusterKey && item.stackable);
+    if (!clusterStillExists) {
+      setExpandedClusterKey(null);
+    }
+  }, [clusteredItems, expandedClusterKey]);
 
   const zoomIntoCluster = useCallback((clusterEvents, clusterCenterX) => {
     if (!clusterEvents?.length || !scrollRef.current) return;
@@ -900,6 +930,7 @@ function TrackRow({
           const clusterEvents = item.events;
           const clusterCenterX = clusterEvents.reduce((sum, evt) => sum + evt.x, 0) / clusterEvents.length;
           const clusterAbove = clusterEvents.filter(evt => evt.above).length >= clusterEvents.length / 2;
+          const isStackExpanded = item.stackable && expandedClusterKey === item.clusterKey;
 
           return (
             <div
@@ -910,7 +941,7 @@ function TrackRow({
                 left: clusterCenterX,
                 top: AXIS_OFFSET,
                 transform: 'translateX(-50%)',
-                zIndex: 18,
+                zIndex: isStackExpanded ? 24 : 18,
               }}
             >
               <div
@@ -919,8 +950,8 @@ function TrackRow({
                   backgroundColor: `${track.color}55`,
                   width: 2,
                   ...(clusterAbove
-                    ? { bottom: 0, height: 54 }
-                    : { top: 0, height: 54 }
+                    ? { bottom: 0, height: isStackExpanded ? 88 : 54 }
+                    : { top: 0, height: isStackExpanded ? 88 : 54 }
                   ),
                 }}
               />
@@ -928,6 +959,11 @@ function TrackRow({
                 data-testid={`event-cluster-${track.id}-${index}`}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (item.stackable) {
+                    setExpandedClusterKey(isStackExpanded ? null : item.clusterKey);
+                    return;
+                  }
+                  setExpandedClusterKey(null);
                   zoomIntoCluster(clusterEvents, clusterCenterX);
                 }}
                 className={`relative z-20 min-w-[28px] h-7 px-2 rounded-full text-[11px] font-bold transition-all duration-200 ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}
@@ -938,10 +974,52 @@ function TrackRow({
                   boxShadow: theme === 'scifi' ? `0 0 10px ${track.color}` : `0 2px 10px ${track.color}30`,
                   marginTop: -10,
                 }}
-                title={`Zoom into ${clusterEvents.length} nearby events`}
+                title={item.stackable ? item.stackLabel : `Zoom into ${clusterEvents.length} nearby events`}
               >
                 {clusterEvents.length}
               </button>
+              {item.stackable && (
+                <div
+                  className={`absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-bold ${theme === 'fantasy' ? 'font-fantasy-heading bg-fantasy-card/95 text-fantasy-muted border border-fantasy-border/60' : 'font-scifi-heading bg-scifi-bg-secondary/95 text-scifi-muted border border-scifi-border/60'}`}
+                  style={clusterAbove ? { bottom: 28 } : { top: 28 }}
+                >
+                  {item.stackLabel}
+                </div>
+              )}
+              {isStackExpanded && (
+                <div
+                  className={`absolute left-1/2 z-30 flex min-w-[220px] max-w-[280px] -translate-x-1/2 flex-col gap-1 rounded-lg border p-2 shadow-lg ${theme === 'fantasy' ? 'bg-fantasy-card/98 border-fantasy-border text-fantasy-text' : 'bg-scifi-bg-secondary/98 border-scifi-border text-scifi-text'}`}
+                  style={clusterAbove ? { bottom: 64 } : { top: 64 }}
+                >
+                  <div className={`text-[10px] font-bold text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
+                    {item.stackLabel}
+                  </div>
+                  {clusterEvents.map((evt) => {
+                    const isExpanded = expandedEvent === evt.id;
+                    return (
+                      <button
+                        key={`${item.clusterKey}-${evt.id}`}
+                        data-interactive="true"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedEvent(isExpanded ? null : evt.id);
+                        }}
+                        className={`w-full rounded-md border px-2 py-1 text-left text-[10px] transition-colors ${theme === 'fantasy' ? 'font-fantasy-heading border-fantasy-border/60 hover:bg-fantasy-bg/60' : 'font-scifi-heading border-scifi-border/60 hover:bg-scifi-bg/70'}`}
+                        style={{
+                          borderColor: isExpanded ? track.color : undefined,
+                          boxShadow: isExpanded ? `0 0 0 1px ${track.color} inset` : 'none',
+                        }}
+                        title={evt.title}
+                      >
+                        <div className="font-bold leading-tight">{evt.title}</div>
+                        <div className={`${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                          {formatYear(evt.year)} {track.abbr}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         }
