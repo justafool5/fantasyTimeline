@@ -128,27 +128,46 @@ export default function TimelineView() {
     return { periodEvent, parentTrackId };
   }, [navStack, allEvents, findEventById]);
 
+  const drilledDisplayTrack = useMemo(() => {
+    if (!currentPeriod) return null;
+
+    const parentTrack = currentPeriod.parentTrackId
+      ? allTracks.find(t => t.id === currentPeriod.parentTrackId)
+      : allTracks[0];
+
+    if (!parentTrack) return null;
+
+    const pe = currentPeriod.periodEvent;
+    if (pe.trackId === null) {
+      return parentTrack;
+    }
+
+    return {
+      ...parentTrack,
+      startYear: pe.startDate.year,
+      endYear: pe.endDate.year,
+    };
+  }, [currentPeriod, allTracks]);
+
   // Calculate effective master range (constrained when drilled into a period)
   const effectiveMasterRange = useMemo(() => {
     if (!currentPeriod) return masterRange;
-    
+
     const pe = currentPeriod.periodEvent;
     if (pe.trackId === null) {
-      // Cross-track period uses master dates
       return {
-        start: pe.masterStartDate.year - 50, // Add padding
-        end: pe.masterEndDate.year + 50,
-      };
-    } else {
-      // Track-specific period - convert to master
-      const track = allTracks.find(t => t.id === pe.trackId);
-      if (!track) return masterRange;
-      return {
-        start: localToMaster(pe.startDate.year, track) - 50,
-        end: localToMaster(pe.endDate.year, track) + 50,
+        start: pe.masterStartDate.year,
+        end: pe.masterEndDate.year,
       };
     }
-  }, [currentPeriod, masterRange, allTracks]);
+
+    if (!drilledDisplayTrack) return masterRange;
+
+    return {
+      start: localToMaster(drilledDisplayTrack.startYear, drilledDisplayTrack),
+      end: localToMaster(drilledDisplayTrack.endYear, drilledDisplayTrack),
+    };
+  }, [currentPeriod, masterRange, drilledDisplayTrack]);
 
   // Auto-fit zoom when entering/exiting sub-timelines
   useEffect(() => {
@@ -356,9 +375,9 @@ export default function TimelineView() {
         >
           {currentPeriod ? (
             <TrackLabel
-              track={currentPeriod.parentTrackId 
-                ? allTracks.find(t => t.id === currentPeriod.parentTrackId) 
-                : allTracks[0]}
+              track={drilledDisplayTrack || (currentPeriod.parentTrackId
+                ? allTracks.find(t => t.id === currentPeriod.parentTrackId)
+                : allTracks[0])}
               trackIndex={0}
               theme={theme}
               onEdit={setEditingTrack}
@@ -408,9 +427,9 @@ export default function TimelineView() {
             {currentPeriod ? (
               <TrackRow
                 key={`drilled-${currentPeriod.periodEvent.id}`}
-                track={currentPeriod.parentTrackId 
-                  ? allTracks.find(t => t.id === currentPeriod.parentTrackId) 
-                  : allTracks[0]}
+                track={drilledDisplayTrack || (currentPeriod.parentTrackId
+                  ? allTracks.find(t => t.id === currentPeriod.parentTrackId)
+                  : allTracks[0])}
                 trackIndex={0}
                 events={displayEvents}
                 masterRange={effectiveMasterRange}
