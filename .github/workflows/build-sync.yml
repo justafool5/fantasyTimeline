@@ -1,0 +1,60 @@
+name: Build and sync GitHub Pages assets
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - 'docs/**'
+      - '.github/workflows/build-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          GENERATE_SOURCEMAP: 'false'
+        run: npm run build
+
+      - name: Sync build output to repository root
+        run: |
+          rm -rf static asset-manifest.json index.html favicon.ico manifest.json robots.txt
+          cp -r frontend/build/* .
+
+      - name: Commit generated site files
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html asset-manifest.json favicon.ico manifest.json robots.txt static data
+          git commit -m "chore: rebuild GitHub Pages assets"
+          git push

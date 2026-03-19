@@ -3,12 +3,15 @@ import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 50;
+
 export default function ZoomControls() {
   const { zoom, setZoom } = useTimeline();
   const { theme } = useTheme();
 
-  const zoomIn = () => setZoom(prev => Math.min(prev * 1.3, 10));
-  const zoomOut = () => setZoom(prev => Math.max(prev / 1.3, 0.1));
+  const zoomIn = () => setZoom(prev => Math.min(prev * 1.3, MAX_ZOOM));
+  const zoomOut = () => setZoom(prev => Math.max(prev / 1.3, MIN_ZOOM));
   const resetZoom = () => setZoom(1);
 
   const btnClass = theme === 'fantasy'

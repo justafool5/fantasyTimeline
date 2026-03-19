@@ -1,7 +1,7 @@
 {
   "timeline": {
-    "title": "[DEMO] Ages of Eldoria",
-    "description": "This is a complete example of the app capabilities",
+    "title": "Ages of Eldoria",
+    "description": "The complete history of the realm of Eldoria, from the Sundering to the Age of Restoration",
     "masterStart": -3000,
     "masterEnd": 2000
   },
@@ -43,48 +43,31 @@
       "trackId": null,
       "type": "point",
       "title": "The Sundering",
-      "masterDate": {
-        "year": -2800
-      },
+      "masterDate": { "year": -2800 },
       "description": "The world was torn asunder when the Elder Gods clashed, shattering the primordial continent into the five great lands. Mountains rose from the sea, rivers changed course, and the sky burned for a hundred years.",
       "image": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400",
-      "tags": [
-        "cataclysm",
-        "divine"
-      ]
+      "tags": ["cataclysm", "divine"]
     },
     {
       "id": "evt-aeloran-founding",
       "trackId": "aeloran",
       "type": "point",
       "title": "Founding of Aeloran",
-      "date": {
-        "year": 0
-      },
+      "date": { "year": 0 },
       "description": "The first Emperor Aelor united the scattered human tribes and established the Aeloran Empire, marking year zero of the Imperial Reckoning.",
       "image": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400",
-      "tags": [
-        "founding",
-        "empire"
-      ]
+      "tags": ["founding", "empire"]
     },
     {
       "id": "evt-golden-age",
       "trackId": "aeloran",
       "type": "period",
       "title": "The Golden Age",
-      "startDate": {
-        "year": 500
-      },
-      "endDate": {
-        "year": 1200
-      },
+      "startDate": { "year": 500 },
+      "endDate": { "year": 1200 },
       "description": "A period of unprecedented peace and prosperity in the Aeloran Empire. Arts, magic, and scholarship flourished.",
       "image": "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=400",
-      "tags": [
-        "prosperity",
-        "culture"
-      ],
+      "tags": ["prosperity", "culture"],
       "children": []
     },
     {
@@ -92,18 +75,11 @@
       "trackId": "aeloran",
       "type": "period",
       "title": "War of the Crowns",
-      "startDate": {
-        "year": 1800
-      },
-      "endDate": {
-        "year": 2100
-      },
+      "startDate": { "year": 1800 },
+      "endDate": { "year": 2100 },
       "description": "A devastating civil war that nearly tore the empire apart as three claimants fought for the throne.",
       "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
-      "tags": [
-        "war",
-        "civil"
-      ],
+      "tags": ["war", "civil"],
       "children": []
     },
     {
@@ -111,33 +87,21 @@
       "trackId": "thalassian",
       "type": "point",
       "title": "Rise of Thalas",
-      "date": {
-        "year": 0
-      },
+      "date": { "year": 0 },
       "description": "The sea-king Thalas conquered the coastal cities and founded the Thalassian Dominion, establishing dominance over the eastern seas.",
       "image": "https://images.unsplash.com/photo-1509248961221-27528cf900bd?w=400",
-      "tags": [
-        "founding",
-        "naval"
-      ]
+      "tags": ["founding", "naval"]
     },
     {
       "id": "evt-sea-wars",
       "trackId": "thalassian",
       "type": "period",
       "title": "The Sea Wars",
-      "startDate": {
-        "year": 800
-      },
-      "endDate": {
-        "year": 1100
-      },
+      "startDate": { "year": 800 },
+      "endDate": { "year": 1100 },
       "description": "A series of naval conflicts between the Thalassian Dominion and the pirate kingdoms of the Shattered Isles.",
       "image": "https://images.unsplash.com/photo-1440581572325-0bea30075d9d?w=400",
-      "tags": [
-        "war",
-        "naval"
-      ],
+      "tags": ["war", "naval"],
       "children": []
     },
     {
@@ -145,47 +109,30 @@
       "trackId": null,
       "type": "point",
       "title": "The Great Eclipse",
-      "masterDate": {
-        "year": 0
-      },
+      "masterDate": { "year": 0 },
       "description": "A total eclipse that lasted three days, during which strange creatures emerged from the shadows. Celebrated and feared across all cultures.",
       "image": "https://images.unsplash.com/photo-1528459584353-5297db1a9c01?w=400",
-      "tags": [
-        "celestial",
-        "mystery"
-      ]
+      "tags": ["celestial", "mystery"]
     },
     {
       "id": "evt-sylvari-awakening",
       "trackId": "sylvari",
       "type": "point",
       "title": "The Awakening",
-      "date": {
-        "year": 0
-      },
+      "date": { "year": 0 },
       "description": "The Sylvari elves emerged from their millennia-long communion with the World Tree, forming the Confederation of the Silver Leaves.",
       "image": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400",
-      "tags": [
-        "founding",
-        "elven"
-      ]
+      "tags": ["founding", "elven"]
     },
     {
       "id": "evt-bloom-wars",
       "trackId": "sylvari",
       "type": "period",
       "title": "The Bloom Wars",
-      "startDate": {
-        "year": 1500
-      },
-      "endDate": {
-        "year": 1800
-      },
+      "startDate": { "year": 1500 },
+      "endDate": { "year": 1800 },
       "description": "Territorial conflicts with the expanding human empires over the sacred groves.",
-      "tags": [
-        "war",
-        "territory"
-      ],
+      "tags": ["war", "territory"],
       "children": []
     },
     {
@@ -193,32 +140,20 @@
       "trackId": null,
       "type": "period",
       "title": "The Dark Age",
-      "masterStartDate": {
-        "year": 500
-      },
-      "masterEndDate": {
-        "year": 900
-      },
+      "masterStartDate": { "year": 500 },
+      "masterEndDate": { "year": 900 },
       "description": "A time of plague, famine, and darkness that affected all civilizations. Magic waned, and many ancient secrets were lost.",
       "image": "https://images.unsplash.com/photo-1505506874110-6a7a69069a08?w=400",
-      "tags": [
-        "darkness",
-        "plague"
-      ]
+      "tags": ["darkness", "plague"]
     },
     {
       "id": "evt-alliance",
       "trackId": null,
       "type": "point",
       "title": "The Grand Alliance",
-      "masterDate": {
-        "year": 1500
-      },
+      "masterDate": { "year": 1500 },
       "description": "For the first time in history, all three great powers signed a treaty of mutual defense against the rising threat from the Shadowlands.",
-      "tags": [
-        "diplomacy",
-        "alliance"
-      ]
+      "tags": ["diplomacy", "alliance"]
     }
   ]
 }

@@ -6,6 +6,11 @@ const TimelineContext = createContext();
 const STORAGE_KEY = 'chronoweave_local_events';
 const TRACKS_KEY = 'chronoweave_local_tracks';
 const LOCAL_TIMELINES_KEY = 'chronoweave_local_timelines';
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 50;
+const BASE_PX_PER_YEAR = 0.8;
+const TIMELINE_PADDING = 150;
+const SIDEBAR_WIDTH = 200;
 
 function loadLocalEvents(timelineId) {
   try {
@@ -178,15 +183,13 @@ export function TimelineProvider({ children }) {
     if (range <= 0) return 1;
 
     // Get viewport width (accounting for sidebar)
-    const viewportWidth = window.innerWidth - 200; // 200px for sidebar + padding
-    const BASE_PX_PER_YEAR = 0.8;
-    const TIMELINE_PADDING = 150;
+    const viewportWidth = window.innerWidth - SIDEBAR_WIDTH;
     
     // Calculate zoom to fit the longest track
     const idealZoom = (viewportWidth - TIMELINE_PADDING) / (range * BASE_PX_PER_YEAR);
     
-    // Clamp zoom to reasonable bounds (0.1 to 10)
-    return Math.min(Math.max(idealZoom, 0.1), 10);
+    // Clamp zoom while allowing short timelines to zoom in far enough
+    return Math.min(Math.max(idealZoom, MIN_ZOOM), MAX_ZOOM);
   }, [allTracks, masterRange, autoFitApplied]);
 
   // Apply auto-fit zoom when tracks are loaded
@@ -205,12 +208,10 @@ export function TimelineProvider({ children }) {
     const range = rangeEnd - rangeStart;
     if (range <= 0) return;
 
-    const viewportWidth = window.innerWidth - 200;
-    const BASE_PX_PER_YEAR = 0.8;
-    const TIMELINE_PADDING = 150;
+    const viewportWidth = window.innerWidth - SIDEBAR_WIDTH;
     
     const idealZoom = (viewportWidth - TIMELINE_PADDING) / (range * BASE_PX_PER_YEAR);
-    const clampedZoom = Math.min(Math.max(idealZoom, 0.1), 10);
+    const clampedZoom = Math.min(Math.max(idealZoom, MIN_ZOOM), MAX_ZOOM);
     
     setZoom(clampedZoom);
   }, []);

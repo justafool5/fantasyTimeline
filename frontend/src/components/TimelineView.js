@@ -19,6 +19,8 @@ import EditTimelineForm from './EditTimelineForm';
 import { Plus, ArrowLeft, Settings, Pencil } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 50;
 const TIMELINE_PADDING = 120;
 const TRACK_HEIGHT = 180;
 const AXIS_OFFSET = 100;
@@ -137,7 +139,7 @@ export default function TimelineView() {
       if (e.shiftKey) return;
       e.preventDefault();
       const delta = e.deltaY > 0 ? 0.92 : 1.08;
-      setZoom(prev => Math.min(Math.max(prev * delta, 0.1), 10));
+      setZoom(prev => Math.min(Math.max(prev * delta, MIN_ZOOM), MAX_ZOOM));
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
@@ -541,6 +543,26 @@ function TrackRow({
       }
     };
 
+    const getAfterAnchorYear = (anchorEvent) => {
+      if (!anchorEvent) return masterRange.start;
+      if (anchorEvent.type === 'period') {
+        return anchorEvent.trackId === null
+          ? anchorEvent.masterEndDate?.year
+          : anchorEvent.endDate?.year;
+      }
+      return getYear(anchorEvent);
+    };
+
+    const getBeforeAnchorYear = (anchorEvent) => {
+      if (!anchorEvent) return masterRange.end;
+      if (anchorEvent.type === 'period') {
+        return anchorEvent.trackId === null
+          ? anchorEvent.masterStartDate?.year
+          : anchorEvent.startDate?.year;
+      }
+      return getYear(anchorEvent);
+    };
+
     // Separate dated and undated events
     const datedEvents = events.filter(e => e.type === 'point' || e.type === 'period');
     const undatedEvents = events.filter(e => e.type === 'undated');
@@ -548,39 +570,55 @@ function TrackRow({
     // Sort dated events by year
     datedEvents.sort((a, b) => (getYear(a) || 0) - (getYear(b) || 0));
 
-    // Calculate position for undated events based on anchors
-    const processedUndated = undatedEvents.map(evt => {
-      // Find anchor events
-      const afterEvt = evt.afterEvent ? datedEvents.find(e => e.id === evt.afterEvent) : null;
-      const beforeEvt = evt.beforeEvent ? datedEvents.find(e => e.id === evt.beforeEvent) : null;
+    const undatedGroups = new Map();
 
-      // Calculate the midpoint year between anchors
-      let afterYear = afterEvt ? (getYear(afterEvt) || masterRange.start) : masterRange.start;
-      let beforeYear = beforeEvt ? (getYear(beforeEvt) || masterRange.end) : masterRange.end;
+    undatedEvents.forEach((evt) => {
+      const key = `${evt.afterEvent ?? '__start__'}::${evt.beforeEvent ?? '__end__'}`;
+      if (!undatedGroups.has(key)) undatedGroups.set(key, []);
+      undatedGroups.get(key).push(evt);
+    });
 
-      // For period anchors, use end date for "after" and start date for "before"
-      if (afterEvt?.type === 'period') {
-        afterYear = afterEvt.trackId === null 
-          ? afterEvt.masterEndDate?.year 
-          : afterEvt.endDate?.year;
-      }
-      if (beforeEvt?.type === 'period') {
-        beforeYear = beforeEvt.trackId === null 
-          ? beforeEvt.masterStartDate?.year 
-          : beforeEvt.startDate?.year;
-      }
+    const processedUndated = [];
 
-      // Position at the midpoint
-      const midYear = (afterYear + beforeYear) / 2;
+    undatedGroups.forEach((groupEvents) => {
+      const sample = groupEvents[0];
+      const afterEvt = sample.afterEvent ? datedEvents.find(e => e.id === sample.afterEvent) : null;
+      const beforeEvt = sample.beforeEvent ? datedEvents.find(e => e.id === sample.beforeEvent) : null;
 
-      return { ...evt, _calculatedYear: midYear };
+      let afterYear = getAfterAnchorYear(afterEvt);
+      let beforeYear = getBeforeAnchorYear(beforeEvt);
+
+      if (afterYear === undefined || afterYear === null) afterYear = masterRange.start;
+      if (beforeYear === undefined || beforeYear === null) beforeYear = masterRange.end;
+
+      const intervalStart = Math.min(afterYear, beforeYear);
+      const intervalEnd = Math.max(afterYear, beforeYear);
+      const interval = intervalEnd - intervalStart;
+
+      const orderedGroup = [...groupEvents].sort((a, b) => {
+        const titleCompare = (a.title || '').localeCompare(b.title || '');
+        if (titleCompare !== 0) return titleCompare;
+        return (a.id || '').localeCompare(b.id || '');
+      });
+
+      orderedGroup.forEach((evt, index) => {
+        const position = interval === 0
+          ? intervalStart
+          : intervalStart + (interval * (index + 1)) / (orderedGroup.length + 1);
+
+        processedUndated.push({ ...evt, _calculatedYear: position });
+      });
     });
 
     // Merge all events and sort
     const allProcessed = [
       ...datedEvents.map(e => ({ ...e, _calculatedYear: getYear(e) })),
       ...processedUndated
-    ].sort((a, b) => (a._calculatedYear || 0) - (b._calculatedYear || 0));
+    ].sort((a, b) => {
+      const yearDiff = (a._calculatedYear || 0) - (b._calculatedYear || 0);
+      if (yearDiff !== 0) return yearDiff;
+      return (a.title || '').localeCompare(b.title || '');
+    });
 
     return allProcessed.map((evt, i) => ({ ...evt, above: i % 2 === 0 }));
   }, [events, masterRange]);
