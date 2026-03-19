@@ -3,14 +3,13 @@ import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
 import { X, Plus, Globe, HelpCircle } from 'lucide-react';
-import { formatYear } from '../utils/timelineUtils';
+const EVENT_TITLE_MAX_LENGTH = 40;
 
 export default function AddEventForm({ trackId, year, crossTrack, masterYear, parentPeriodId, forceCrossTrack, onClose }) {
   const { addEvent, allTracks, allEvents } = useTimeline();
   const { theme } = useTheme();
 
   const initialTrack = trackId || (allTracks.length > 0 ? allTracks[0].id : null);
-  const currentTrack = allTracks.find(t => t.id === initialTrack);
   
   // When adding to a track-specific period, disable cross-track option
   // When adding to a cross-track period (forceCrossTrack), force cross-track mode
@@ -71,11 +70,12 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.title.trim()) return;
+    const normalizedTitle = form.title.trim().slice(0, EVENT_TITLE_MAX_LENGTH);
+    if (!normalizedTitle) return;
 
     const event = {
       type: form.type,
-      title: form.title.trim(),
+      title: normalizedTitle,
       description: form.description.trim(),
       image: form.image.trim() || null,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
@@ -163,11 +163,15 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
             data-testid="event-title-input"
             type="text"
             value={form.title}
-            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            onChange={e => setForm(f => ({ ...f, title: e.target.value.slice(0, EVENT_TITLE_MAX_LENGTH) }))}
             className={inputClass}
             placeholder="Event name..."
+            maxLength={EVENT_TITLE_MAX_LENGTH}
             required
           />
+          <p className={`text-[10px] mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+            {form.title.length}/{EVENT_TITLE_MAX_LENGTH} characters
+          </p>
         </div>
 
         {/* Cross-Track Toggle - disabled when adding sub-events to track-specific period */}

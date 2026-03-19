@@ -23,9 +23,9 @@ const MIN_ZOOM = 0.1;
 const TIMELINE_PADDING = 120;
 const TRACK_HEIGHT = 180;
 const AXIS_OFFSET = 100;
-const EVENT_LABEL_MAX_CHARS = 40;
 const EVENT_LABEL_WIDTH = 220;
 const EVENT_LABEL_GUTTER = 12;
+const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
 
 export default function TimelineView() {
   const {
@@ -183,13 +183,15 @@ export default function TimelineView() {
     const rect = axisRef?.getBoundingClientRect();
     if (!rect) return;
     const clickX = e.clientX - rect.left;
+    const timelineX = clickX + (axisRef?.offsetLeft || 0) - TRACK_CONTENT_START;
+    if (timelineX < 0) return;
     
     // Determine if we're in a cross-track period context
     const isParentCrossTrack = currentPeriod?.periodEvent?.trackId === null;
     
     if (isParentCrossTrack) {
       // Cross-track period: sub-events must also be cross-track, use master year
-      const masterYear = positionToMasterYear(clickX, effectiveMasterRange, pixelsPerYear);
+      const masterYear = positionToMasterYear(timelineX, effectiveMasterRange, pixelsPerYear);
       setAddEventState({ 
         crossTrack: true,
         masterYear: masterYear,
@@ -198,7 +200,7 @@ export default function TimelineView() {
       });
     } else {
       // Track-specific period or top-level: use local year
-      const localYear = positionToLocalYear(clickX, track, effectiveMasterRange, pixelsPerYear);
+      const localYear = positionToLocalYear(timelineX, track, effectiveMasterRange, pixelsPerYear);
       setAddEventState({ 
         trackId: track.id, 
         year: localYear,
@@ -331,7 +333,7 @@ export default function TimelineView() {
             ref={timelineAreaRef}
             className="relative"
             style={{
-              width: totalWidth + TIMELINE_PADDING,
+              width: totalWidth + TRACK_CONTENT_START + TIMELINE_PADDING,
               minHeight: currentPeriod 
                 ? TRACK_HEIGHT + 100
                 : allTracks.length * TRACK_HEIGHT + 100,
@@ -654,7 +656,7 @@ function TrackRow({
         <div
           key={m.localYear}
           className="absolute flex flex-col items-center pointer-events-none"
-          style={{ left: m.x, top: AXIS_OFFSET - 20 }}
+          style={{ left: TRACK_CONTENT_START + m.x, top: AXIS_OFFSET - 20 }}
         >
           <div className={`h-5 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/30' : 'bg-scifi-border/25'}`} />
           <span className={`text-[9px] mt-0.5 whitespace-nowrap select-none ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted/50'}`}>
@@ -671,7 +673,7 @@ function TrackRow({
         className="absolute h-10 cursor-pointer"
         style={{
           top: AXIS_OFFSET - 20,
-          left: trackStartX,
+          left: TRACK_CONTENT_START + trackStartX,
           width: trackEndX - trackStartX,
         }}
         onClick={(e) => onAxisClick(e, track, axisRef.current)}
@@ -698,7 +700,7 @@ function TrackRow({
             data-testid={`period-bar-${evt.id}`}
             className="absolute cursor-pointer transition-all"
             style={{
-              left: dims.left,
+              left: TRACK_CONTENT_START + dims.left,
               width: Math.max(dims.width, 4),
               top: AXIS_OFFSET - 8,
               height: 16,
@@ -738,14 +740,11 @@ function TrackRow({
         
         if (masterYear === undefined) return null; // Skip invalid events
         
-        const x = (masterYear - masterRange.start) * pixelsPerYear;
+        const rawX = (masterYear - masterRange.start) * pixelsPerYear;
+        const x = TRACK_CONTENT_START + rawX;
         const isExpanded = expandedEvent === evt.id;
         const hasImage = !!evt.image;
-        const displayTitle = (evt.title || '').slice(0, EVENT_LABEL_MAX_CHARS);
-        const labelHalfWidth = EVENT_LABEL_WIDTH / 2;
-        const minMarkerX = labelHalfWidth + EVENT_LABEL_GUTTER;
-        const maxMarkerX = Math.max(minMarkerX, totalWidth - labelHalfWidth - EVENT_LABEL_GUTTER);
-        const safeX = Math.min(Math.max(x, minMarkerX), maxMarkerX);
+        const displayTitle = evt.title || '';
 
         return (
           <div
@@ -753,7 +752,7 @@ function TrackRow({
             data-interactive="true"
             className="absolute transition-all"
             style={{
-              left: safeX,
+              left: x,
               top: AXIS_OFFSET,
               transform: 'translateX(-50%)',
               zIndex: isExpanded ? 20 : 10,
@@ -851,8 +850,8 @@ function CrossTrackEvent({
 }) {
   const isPeriod = event.type === 'period';
   const masterYear = isPeriod ? event.masterStartDate.year : event.masterDate.year;
-  const x = (masterYear - masterRange.start) * pixelsPerYear + 20; // Reduced padding since sidebar handles it
-  const displayTitle = (event.title || '').slice(0, EVENT_LABEL_MAX_CHARS);
+  const x = TRACK_CONTENT_START + (masterYear - masterRange.start) * pixelsPerYear;
+  const displayTitle = event.title || '';
   
   let width = 4;
   if (isPeriod) {

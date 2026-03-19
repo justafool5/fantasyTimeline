@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { X, MapPin, Trash2, Pencil, Save, XCircle, Globe, Layers, HelpCircle } from 'lucide-react';
 import { formatYear, getTagColor, masterToLocal } from '../utils/timelineUtils';
 
+const EVENT_TITLE_MAX_LENGTH = 40;
+
 export default function EventCard({ event, tracks, onClose, onDrillIn }) {
   const { updateEvent, deleteEvent, allEvents } = useTimeline();
   const { theme } = useTheme();
@@ -98,8 +100,11 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
   const [form, setForm] = useState(getInitialFormState);
 
   const handleSave = () => {
+    const normalizedTitle = form.title.trim().slice(0, EVENT_TITLE_MAX_LENGTH);
+    if (!normalizedTitle) return;
+
     const updates = {
-      title: form.title.trim(),
+      title: normalizedTitle,
       description: form.description.trim(),
       image: form.image.trim() || null,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
@@ -176,13 +181,19 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
                 data-testid="edit-title-input"
                 type="text"
                 value={form.title}
-                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value.slice(0, EVENT_TITLE_MAX_LENGTH) }))}
                 className={`${inputClass} text-lg font-bold`}
+                maxLength={EVENT_TITLE_MAX_LENGTH}
               />
             ) : (
               <h3 className={`text-xl font-bold leading-tight ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-base text-scifi-accent'}`}>
                 {event.title}
               </h3>
+            )}
+            {editing && (
+              <p className={`text-[10px] mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+                {form.title.length}/{EVENT_TITLE_MAX_LENGTH} characters
+              </p>
             )}
 
             {/* Cross-track badge */}
