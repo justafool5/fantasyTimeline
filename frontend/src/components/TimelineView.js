@@ -19,7 +19,7 @@ import AddTrackForm from './AddTrackForm';
 import EditTrackForm from './EditTrackForm';
 import EditTimelineForm from './EditTimelineForm';
 import EditTagDefinitionsForm from './EditTagDefinitionsForm';
-import { Plus, ArrowLeft, Settings, Pencil } from 'lucide-react';
+import { Plus, ArrowLeft, Settings, Pencil, X } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
@@ -32,12 +32,7 @@ const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTE
 const CLUSTER_DISTANCE_PX = 18;
 const CLUSTER_SPLIT_TARGET_PX = 28;
 const CLUSTER_STACK_EPSILON_PX = 0.5;
-const STACK_PANEL_WIDTH = 320;
-const STACK_PANEL_SIDE_PADDING = 16;
-const STACK_PANEL_VERTICAL_GAP = 64;
-const STACK_PANEL_MIN_TOP = 12;
-const STACK_PANEL_MAX_HEIGHT_MARGIN = 24;
-const STACK_PANEL_ESTIMATED_HEIGHT = 220;
+const STACK_DETAILS_WIDTH = 320;
 const MIN_LABEL_WIDTH = 80;
 const TARGET_LABEL_LINE_LENGTH = 22;
 const ESTIMATED_CHAR_WIDTH = 6.5;
@@ -101,6 +96,7 @@ export default function TimelineView() {
   const [editingTrack, setEditingTrack] = useState(null); // track object to edit
   const [showEditTimeline, setShowEditTimeline] = useState(false);
   const [showEditTagDefinitions, setShowEditTagDefinitions] = useState(false);
+  const [selectedStackCluster, setSelectedStackCluster] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const hasDraggedRef = useRef(false);
   const isScrollingRef = useRef(false);
@@ -224,6 +220,12 @@ export default function TimelineView() {
     }, 50);
   }, []);
 
+  const handleMainTimelineMouseDownCapture = useCallback((e) => {
+    if (!selectedStackCluster) return;
+    if (e.target.closest('[data-stack-panel]') || e.target.closest('[data-stack-trigger]')) return;
+    setSelectedStackCluster(null);
+  }, [selectedStackCluster]);
+
   useEffect(() => {
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
@@ -346,7 +348,7 @@ export default function TimelineView() {
       </div>
 
       {/* Main content area with fixed sidebar and scrollable timeline */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
         {/* Fixed left sidebar with track names */}
         <div 
           className={`flex-shrink-0 w-48 overflow-y-auto ${theme === 'fantasy' ? 'bg-fantasy-card/80 border-r border-fantasy-border/30' : 'bg-scifi-bg-secondary/80 border-r border-scifi-border/30'}`}
@@ -373,6 +375,16 @@ export default function TimelineView() {
             ))
           )}
         </div>
+
+        {selectedStackCluster && (
+          <StackClusterDetailsPanel
+            stackCluster={selectedStackCluster}
+            expandedEvent={expandedEvent}
+            setExpandedEvent={setExpandedEvent}
+            theme={theme}
+            onClose={() => setSelectedStackCluster(null)}
+          />
+        )}
 
         {/* Scrollable timeline area */}
         <div
@@ -409,6 +421,8 @@ export default function TimelineView() {
                 setExpandedEvent={setExpandedEvent}
                 onAxisClick={handleTrackAxisClick}
                 theme={theme}
+                selectedStackCluster={selectedStackCluster}
+                onToggleStackCluster={setSelectedStackCluster}
                 periodContext={currentPeriod.periodEvent}
                 showHeader={false}
               />
@@ -429,6 +443,8 @@ export default function TimelineView() {
                     setExpandedEvent={setExpandedEvent}
                     onAxisClick={handleTrackAxisClick}
                     theme={theme}
+                    selectedStackCluster={selectedStackCluster}
+                    onToggleStackCluster={setSelectedStackCluster}
                     showHeader={false}
                   />
                 ))}
@@ -582,16 +598,13 @@ function TrackRow({
   setExpandedEvent,
   onAxisClick,
   theme,
+  selectedStackCluster,
+  onToggleStackCluster,
   showHeader = true,
 }) {
   const { setZoom, scrollRef, timelineMeta } = useTimeline();
   const axisRef = useRef(null);
   const topOffset = trackIndex * TRACK_HEIGHT + 20;
-  const [expandedClusterKey, setExpandedClusterKey] = useState(null);
-  const visibleViewportWidth = scrollRef.current?.clientWidth || 0;
-  const visibleViewportHeight = scrollRef.current?.clientHeight || 0;
-  const visibleScrollLeft = scrollRef.current?.scrollLeft || 0;
-  const visibleScrollTop = scrollRef.current?.scrollTop || 0;
 
   // Generate year markers for this track
   const yearMarkers = useMemo(() => {
@@ -758,7 +771,6 @@ function TrackRow({
         events: sortedClusterEvents,
         stackable,
         clusterKey: sortedClusterEvents.map(evt => evt.id).join('::'),
-        stackLabel: stackable ? `${sortedClusterEvents.length} events in year ${formatYear(sortedClusterEvents[0].year)}` : null,
       };
     };
 
@@ -806,14 +818,6 @@ function TrackRow({
 
     return visibility;
   }, [clusteredItems]);
-
-  useEffect(() => {
-    if (!expandedClusterKey) return;
-    const clusterStillExists = clusteredItems.some(item => item.type === 'cluster' && item.clusterKey === expandedClusterKey && item.stackable);
-    if (!clusterStillExists) {
-      setExpandedClusterKey(null);
-    }
-  }, [clusteredItems, expandedClusterKey]);
 
   const zoomIntoCluster = useCallback((clusterEvents, clusterCenterX) => {
     if (!clusterEvents?.length || !scrollRef.current) return;
@@ -940,35 +944,7 @@ function TrackRow({
           const clusterEvents = item.events;
           const clusterCenterX = clusterEvents.reduce((sum, evt) => sum + evt.x, 0) / clusterEvents.length;
           const clusterAbove = clusterEvents.filter(evt => evt.above).length >= clusterEvents.length / 2;
-          const isStackExpanded = item.stackable && expandedClusterKey === item.clusterKey;
-          const halfPanelWidth = STACK_PANEL_WIDTH / 2;
-          const visibleLeftEdge = visibleScrollLeft + STACK_PANEL_SIDE_PADDING;
-          const visibleRightEdge = visibleScrollLeft + visibleViewportWidth - STACK_PANEL_SIDE_PADDING;
-          const desiredLeft = clusterCenterX - halfPanelWidth;
-          const clampedLeft = visibleViewportWidth > 0
-            ? Math.max(visibleLeftEdge, Math.min(desiredLeft, visibleRightEdge - STACK_PANEL_WIDTH))
-            : desiredLeft;
-          const panelOffsetX = clampedLeft - desiredLeft;
-          const maxPanelHeight = visibleViewportHeight > 0
-            ? Math.max(160, visibleViewportHeight - STACK_PANEL_MAX_HEIGHT_MARGIN)
-            : STACK_PANEL_ESTIMATED_HEIGHT;
-          const desiredTop = clusterAbove
-            ? AXIS_OFFSET - STACK_PANEL_VERTICAL_GAP - STACK_PANEL_ESTIMATED_HEIGHT
-            : AXIS_OFFSET + STACK_PANEL_VERTICAL_GAP;
-          const maxVisibleTop = visibleViewportHeight > 0
-            ? visibleScrollTop + visibleViewportHeight - STACK_PANEL_ESTIMATED_HEIGHT - STACK_PANEL_MIN_TOP
-            : desiredTop;
-          const clampedTop = visibleViewportHeight > 0
-            ? Math.max(visibleScrollTop + STACK_PANEL_MIN_TOP, Math.min(desiredTop, maxVisibleTop))
-            : desiredTop;
-          const stackLabelStyle = clusterAbove ? { bottom: 28 } : { top: 28 };
-          const stackPanelStyle = {
-            left: `calc(50% + ${panelOffsetX}px)`,
-            top: clampedTop - AXIS_OFFSET,
-            width: STACK_PANEL_WIDTH,
-            maxHeight: maxPanelHeight,
-            overflowY: 'auto',
-          };
+          const isStackSelected = item.stackable && selectedStackCluster?.clusterKey === item.clusterKey;
 
           return (
             <div
@@ -979,7 +955,7 @@ function TrackRow({
                 left: clusterCenterX,
                 top: AXIS_OFFSET,
                 transform: 'translateX(-50%)',
-                zIndex: isStackExpanded ? 24 : 18,
+                zIndex: isStackSelected ? 24 : 18,
               }}
             >
               <div
@@ -988,20 +964,28 @@ function TrackRow({
                   backgroundColor: `${track.color}55`,
                   width: 2,
                   ...(clusterAbove
-                    ? { bottom: 0, height: isStackExpanded ? 88 : 54 }
-                    : { top: 0, height: isStackExpanded ? 88 : 54 }
+                    ? { bottom: 0, height: 54 }
+                    : { top: 0, height: 54 }
                   ),
                 }}
               />
               <button
                 data-testid={`event-cluster-${track.id}-${index}`}
+                data-stack-trigger="true"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (item.stackable) {
-                    setExpandedClusterKey(isStackExpanded ? null : item.clusterKey);
+                    onToggleStackCluster(isStackSelected ? null : {
+                      clusterKey: item.clusterKey,
+                      trackId: track.id,
+                      trackName: track.name,
+                      trackAbbr: track.abbr,
+                      trackColor: track.color,
+                      events: clusterEvents,
+                    });
                     return;
                   }
-                  setExpandedClusterKey(null);
+                  onToggleStackCluster(null);
                   zoomIntoCluster(clusterEvents, clusterCenterX);
                 }}
                 className={`relative z-20 min-w-[28px] h-7 px-2 rounded-full text-[11px] font-bold transition-all duration-200 ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}
@@ -1012,66 +996,10 @@ function TrackRow({
                   boxShadow: theme === 'scifi' ? `0 0 10px ${track.color}` : `0 2px 10px ${track.color}30`,
                   marginTop: -10,
                 }}
-                title={item.stackable ? item.stackLabel : `Zoom into ${clusterEvents.length} nearby events`}
+                title={item.stackable ? `Show ${clusterEvents.length} stacked events` : `Zoom into ${clusterEvents.length} nearby events`}
               >
                 {clusterEvents.length}
               </button>
-              {item.stackable && (
-                <div
-                  className={`absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-bold ${theme === 'fantasy' ? 'font-fantasy-heading bg-fantasy-card/95 text-fantasy-muted border border-fantasy-border/60' : 'font-scifi-heading bg-scifi-bg-secondary/95 text-scifi-muted border border-scifi-border/60'}`}
-                  style={stackLabelStyle}
-                >
-                  {item.stackLabel}
-                </div>
-              )}
-              {isStackExpanded && (
-                <div
-                  className={`absolute z-30 flex -translate-x-1/2 flex-col gap-2 rounded-lg border p-3 shadow-lg ${theme === 'fantasy' ? 'bg-fantasy-card/98 border-fantasy-border text-fantasy-text' : 'bg-scifi-bg-secondary/98 border-scifi-border text-scifi-text'}`}
-                  style={stackPanelStyle}
-                >
-                  <div className={`text-[10px] font-bold text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
-                    {item.stackLabel}
-                  </div>
-                  {clusterEvents.map((evt) => {
-                    const isExpanded = expandedEvent === evt.id;
-                    return (
-                      <button
-                        key={`${item.clusterKey}-${evt.id}`}
-                        data-interactive="true"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedEvent(isExpanded ? null : evt.id);
-                        }}
-                        className={`w-full rounded-md border px-3 py-2 text-left text-[10px] transition-colors ${theme === 'fantasy' ? 'font-fantasy-heading border-fantasy-border/60 hover:bg-fantasy-bg/60' : 'font-scifi-heading border-scifi-border/60 hover:bg-scifi-bg/70'}`}
-                        style={{
-                          borderColor: isExpanded ? track.color : undefined,
-                          boxShadow: isExpanded ? `0 0 0 1px ${track.color} inset` : 'none',
-                        }}
-                        title={evt.title}
-                      >
-                        <div className="font-bold leading-snug whitespace-normal break-words">{evt.title}</div>
-                        {evt.resolvedTags.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {evt.resolvedTags.map(tag => (
-                              <span
-                                key={`${evt.id}-stack-tag-${tag.id}`}
-                                className="px-2 py-0.5 text-[10px] font-bold leading-none"
-                                style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
-                                title={tag.label}
-                              >
-                                {tag.label}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <div className={`mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                          {formatYear(evt.year)} {track.abbr}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           );
         }
@@ -1213,6 +1141,86 @@ function TrackRow({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function StackClusterDetailsPanel({
+  stackCluster,
+  expandedEvent,
+  setExpandedEvent,
+  theme,
+  onClose,
+}) {
+  return (
+    <div
+      data-stack-panel="true"
+      className={`flex-shrink-0 overflow-y-auto border-r ${theme === 'fantasy' ? 'bg-fantasy-card/90 border-fantasy-border/30' : 'bg-scifi-bg-secondary/85 border-scifi-border/30'}`}
+      style={{ width: STACK_DETAILS_WIDTH }}
+    >
+      <div className="flex items-center justify-between gap-2 px-3 py-3 border-b border-inherit">
+        <div className="min-w-0">
+          <div className={`text-xs font-bold uppercase tracking-wide ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
+            Stacked events
+          </div>
+          <div className={`text-sm font-bold truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+            {stackCluster.trackName}
+          </div>
+        </div>
+        <button
+          data-interactive="true"
+          data-stack-panel="true"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className={`flex h-8 w-8 items-center justify-center border transition-colors ${theme === 'fantasy' ? 'border-fantasy-border/50 text-fantasy-muted hover:text-fantasy-accent hover:border-fantasy-accent/50' : 'border-scifi-border/50 text-scifi-muted hover:text-scifi-accent hover:border-scifi-accent/50'}`}
+          title="Close stacked events"
+        >
+          <X size={14} />
+        </button>
+      </div>
+      <div className="flex flex-col gap-2 p-3">
+        {stackCluster.events.map((evt) => {
+          const isExpanded = expandedEvent === evt.id;
+          return (
+            <button
+              key={`${stackCluster.clusterKey}-${evt.id}`}
+              data-interactive="true"
+              data-stack-panel="true"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpandedEvent(isExpanded ? null : evt.id);
+              }}
+              className={`w-full rounded-md border px-3 py-2 text-left text-[10px] transition-colors ${theme === 'fantasy' ? 'font-fantasy-heading border-fantasy-border/60 hover:bg-fantasy-bg/60' : 'font-scifi-heading border-scifi-border/60 hover:bg-scifi-bg/70'}`}
+              style={{
+                borderColor: isExpanded ? stackCluster.trackColor : undefined,
+                boxShadow: isExpanded ? `0 0 0 1px ${stackCluster.trackColor} inset` : 'none',
+              }}
+              title={evt.title}
+            >
+              <div className="font-bold leading-snug whitespace-normal break-words">{evt.title}</div>
+              {evt.resolvedTags.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {evt.resolvedTags.map(tag => (
+                    <span
+                      key={`${evt.id}-stack-panel-tag-${tag.id}`}
+                      className="px-2 py-0.5 text-[10px] font-bold leading-none"
+                      style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
+                      title={tag.label}
+                    >
+                      {tag.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className={`mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                {formatYear(evt.year)} {stackCluster.trackAbbr}
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
