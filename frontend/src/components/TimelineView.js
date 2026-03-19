@@ -32,6 +32,12 @@ const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTE
 const CLUSTER_DISTANCE_PX = 18;
 const CLUSTER_SPLIT_TARGET_PX = 28;
 const CLUSTER_STACK_EPSILON_PX = 0.5;
+const STACK_PANEL_WIDTH = 320;
+const STACK_PANEL_SIDE_PADDING = 16;
+const STACK_PANEL_VERTICAL_GAP = 64;
+const STACK_PANEL_MIN_TOP = 12;
+const STACK_PANEL_MAX_HEIGHT_MARGIN = 24;
+const STACK_PANEL_ESTIMATED_HEIGHT = 220;
 const MIN_LABEL_WIDTH = 80;
 const TARGET_LABEL_LINE_LENGTH = 22;
 const ESTIMATED_CHAR_WIDTH = 6.5;
@@ -582,6 +588,10 @@ function TrackRow({
   const axisRef = useRef(null);
   const topOffset = trackIndex * TRACK_HEIGHT + 20;
   const [expandedClusterKey, setExpandedClusterKey] = useState(null);
+  const visibleViewportWidth = scrollRef.current?.clientWidth || 0;
+  const visibleViewportHeight = scrollRef.current?.clientHeight || 0;
+  const visibleScrollLeft = scrollRef.current?.scrollLeft || 0;
+  const visibleScrollTop = scrollRef.current?.scrollTop || 0;
 
   // Generate year markers for this track
   const yearMarkers = useMemo(() => {
@@ -931,6 +941,34 @@ function TrackRow({
           const clusterCenterX = clusterEvents.reduce((sum, evt) => sum + evt.x, 0) / clusterEvents.length;
           const clusterAbove = clusterEvents.filter(evt => evt.above).length >= clusterEvents.length / 2;
           const isStackExpanded = item.stackable && expandedClusterKey === item.clusterKey;
+          const halfPanelWidth = STACK_PANEL_WIDTH / 2;
+          const visibleLeftEdge = visibleScrollLeft + STACK_PANEL_SIDE_PADDING;
+          const visibleRightEdge = visibleScrollLeft + visibleViewportWidth - STACK_PANEL_SIDE_PADDING;
+          const desiredLeft = clusterCenterX - halfPanelWidth;
+          const clampedLeft = visibleViewportWidth > 0
+            ? Math.max(visibleLeftEdge, Math.min(desiredLeft, visibleRightEdge - STACK_PANEL_WIDTH))
+            : desiredLeft;
+          const panelOffsetX = clampedLeft - desiredLeft;
+          const maxPanelHeight = visibleViewportHeight > 0
+            ? Math.max(160, visibleViewportHeight - STACK_PANEL_MAX_HEIGHT_MARGIN)
+            : STACK_PANEL_ESTIMATED_HEIGHT;
+          const desiredTop = clusterAbove
+            ? AXIS_OFFSET - STACK_PANEL_VERTICAL_GAP - STACK_PANEL_ESTIMATED_HEIGHT
+            : AXIS_OFFSET + STACK_PANEL_VERTICAL_GAP;
+          const maxVisibleTop = visibleViewportHeight > 0
+            ? visibleScrollTop + visibleViewportHeight - STACK_PANEL_ESTIMATED_HEIGHT - STACK_PANEL_MIN_TOP
+            : desiredTop;
+          const clampedTop = visibleViewportHeight > 0
+            ? Math.max(visibleScrollTop + STACK_PANEL_MIN_TOP, Math.min(desiredTop, maxVisibleTop))
+            : desiredTop;
+          const stackLabelStyle = clusterAbove ? { bottom: 28 } : { top: 28 };
+          const stackPanelStyle = {
+            left: `calc(50% + ${panelOffsetX}px)`,
+            top: clampedTop - AXIS_OFFSET,
+            width: STACK_PANEL_WIDTH,
+            maxHeight: maxPanelHeight,
+            overflowY: 'auto',
+          };
 
           return (
             <div
@@ -981,15 +1019,15 @@ function TrackRow({
               {item.stackable && (
                 <div
                   className={`absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-bold ${theme === 'fantasy' ? 'font-fantasy-heading bg-fantasy-card/95 text-fantasy-muted border border-fantasy-border/60' : 'font-scifi-heading bg-scifi-bg-secondary/95 text-scifi-muted border border-scifi-border/60'}`}
-                  style={clusterAbove ? { bottom: 28 } : { top: 28 }}
+                  style={stackLabelStyle}
                 >
                   {item.stackLabel}
                 </div>
               )}
               {isStackExpanded && (
                 <div
-                  className={`absolute left-1/2 z-30 flex min-w-[220px] max-w-[280px] -translate-x-1/2 flex-col gap-1 rounded-lg border p-2 shadow-lg ${theme === 'fantasy' ? 'bg-fantasy-card/98 border-fantasy-border text-fantasy-text' : 'bg-scifi-bg-secondary/98 border-scifi-border text-scifi-text'}`}
-                  style={clusterAbove ? { bottom: 64 } : { top: 64 }}
+                  className={`absolute z-30 flex -translate-x-1/2 flex-col gap-2 rounded-lg border p-3 shadow-lg ${theme === 'fantasy' ? 'bg-fantasy-card/98 border-fantasy-border text-fantasy-text' : 'bg-scifi-bg-secondary/98 border-scifi-border text-scifi-text'}`}
+                  style={stackPanelStyle}
                 >
                   <div className={`text-[10px] font-bold text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
                     {item.stackLabel}
@@ -1004,15 +1042,29 @@ function TrackRow({
                           e.stopPropagation();
                           setExpandedEvent(isExpanded ? null : evt.id);
                         }}
-                        className={`w-full rounded-md border px-2 py-1 text-left text-[10px] transition-colors ${theme === 'fantasy' ? 'font-fantasy-heading border-fantasy-border/60 hover:bg-fantasy-bg/60' : 'font-scifi-heading border-scifi-border/60 hover:bg-scifi-bg/70'}`}
+                        className={`w-full rounded-md border px-3 py-2 text-left text-[10px] transition-colors ${theme === 'fantasy' ? 'font-fantasy-heading border-fantasy-border/60 hover:bg-fantasy-bg/60' : 'font-scifi-heading border-scifi-border/60 hover:bg-scifi-bg/70'}`}
                         style={{
                           borderColor: isExpanded ? track.color : undefined,
                           boxShadow: isExpanded ? `0 0 0 1px ${track.color} inset` : 'none',
                         }}
                         title={evt.title}
                       >
-                        <div className="font-bold leading-tight">{evt.title}</div>
-                        <div className={`${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                        <div className="font-bold leading-snug whitespace-normal break-words">{evt.title}</div>
+                        {evt.resolvedTags.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {evt.resolvedTags.map(tag => (
+                              <span
+                                key={`${evt.id}-stack-tag-${tag.id}`}
+                                className="px-2 py-0.5 text-[10px] font-bold leading-none"
+                                style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
+                                title={tag.label}
+                              >
+                                {tag.label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className={`mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
                           {formatYear(evt.year)} {track.abbr}
                         </div>
                       </button>
