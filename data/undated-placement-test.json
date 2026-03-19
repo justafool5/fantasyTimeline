@@ -1,0 +1,130 @@
+{
+  "timeline": {
+    "title": "Undated Placement Test",
+    "description": "Validation timeline for undated event spacing and short-range zoom behavior.",
+    "masterStart": 0,
+    "masterEnd": 40
+  },
+  "tracks": [
+    {
+      "id": "test-track",
+      "name": "Reference Track",
+      "calendarName": "Reference Years",
+      "abbr": "RY",
+      "color": "#4a9eff",
+      "epoch": 0,
+      "startYear": 0,
+      "endYear": 40
+    }
+  ],
+  "events": [
+    {
+      "id": "anchor-start",
+      "type": "point",
+      "title": "Founding of the Order",
+      "description": "Starting anchor event.",
+      "image": null,
+      "tags": ["anchor"],
+      "trackId": "test-track",
+      "date": { "year": 2 }
+    },
+    {
+      "id": "anchor-middle",
+      "type": "point",
+      "title": "Treaty of Lanterns",
+      "description": "Middle anchor event.",
+      "image": null,
+      "tags": ["anchor"],
+      "trackId": "test-track",
+      "date": { "year": 14 }
+    },
+    {
+      "id": "anchor-period",
+      "type": "period",
+      "title": "The Ember Campaign",
+      "description": "Period anchor used to test undated spacing around period bounds.",
+      "image": null,
+      "tags": ["period"],
+      "trackId": "test-track",
+      "startDate": { "year": 22 },
+      "endDate": { "year": 30 },
+      "children": []
+    },
+    {
+      "id": "anchor-end",
+      "type": "point",
+      "title": "Coronation of the Regent",
+      "description": "Ending anchor event.",
+      "image": null,
+      "tags": ["anchor"],
+      "trackId": "test-track",
+      "date": { "year": 36 }
+    },
+    {
+      "id": "undated-a",
+      "type": "undated",
+      "title": "Hidden alliance",
+      "description": "First undated event between the same point anchors.",
+      "image": null,
+      "tags": ["undated"],
+      "trackId": "test-track",
+      "afterEvent": "anchor-start",
+      "beforeEvent": "anchor-middle"
+    },
+    {
+      "id": "undated-b",
+      "type": "undated",
+      "title": "Missing supply caravan",
+      "description": "Second undated event between the same point anchors.",
+      "image": null,
+      "tags": ["undated"],
+      "trackId": "test-track",
+      "afterEvent": "anchor-start",
+      "beforeEvent": "anchor-middle"
+    },
+    {
+      "id": "undated-c",
+      "type": "undated",
+      "title": "Secret oath",
+      "description": "Third undated event between the same point anchors.",
+      "image": null,
+      "tags": ["undated"],
+      "trackId": "test-track",
+      "afterEvent": "anchor-start",
+      "beforeEvent": "anchor-middle"
+    },
+    {
+      "id": "undated-d",
+      "type": "undated",
+      "title": "Rumors before the campaign",
+      "description": "Uses the timeline start as left anchor.",
+      "image": null,
+      "tags": ["undated", "boundary"],
+      "trackId": "test-track",
+      "afterEvent": null,
+      "beforeEvent": "anchor-start"
+    },
+    {
+      "id": "undated-e",
+      "type": "undated",
+      "title": "Campfire accord",
+      "description": "Placed after a period, so it should use the period end as left anchor.",
+      "image": null,
+      "tags": ["undated", "period-boundary"],
+      "trackId": "test-track",
+      "afterEvent": "anchor-period",
+      "beforeEvent": "anchor-end"
+    },
+    {
+      "id": "undated-f",
+      "type": "undated",
+      "title": "Aftermath report",
+      "description": "Uses the timeline end as right anchor.",
+      "image": null,
+      "tags": ["undated", "boundary"],
+      "trackId": "test-track",
+      "afterEvent": "anchor-end",
+      "beforeEvent": null
+    }
+  ]
+}

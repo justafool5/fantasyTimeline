@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
-import { X, MapPin, Trash2, Pencil, Save, XCircle, Globe, Layers } from 'lucide-react';
-import { formatYear, getTagColor, masterToLocal, localToMaster } from '../utils/timelineUtils';
+import { X, MapPin, Trash2, Pencil, Save, XCircle, Globe, Layers, HelpCircle } from 'lucide-react';
+import { formatYear, getReadableTextColor, getResolvedEventTags, masterToLocal } from '../utils/timelineUtils';
+
+const EVENT_TITLE_MAX_LENGTH = 40;
 
 export default function EventCard({ event, tracks, onClose, onDrillIn }) {
-  const { updateEvent, deleteEvent } = useTimeline();
+  const { updateEvent, deleteEvent, allEvents, timelineMeta } = useTimeline();
   const { theme } = useTheme();
   const [editing, setEditing] = useState(false);
 
   const isCrossTrack = event.trackId === null;
   const track = !isCrossTrack ? tracks.find(t => t.id === event.trackId) : null;
   const isPeriod = event.type === 'period';
+  const isUndated = event.type === 'undated';
 
   // Get year info for display
   let yearDisplay = '';
@@ -39,16 +42,43 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
     }
   }
 
+  const anchorEvents = useMemo(() => {
+    if (!isUndated) return [];
+
+    const candidates = allEvents.filter((candidate) => {
+      if (candidate.id === event.id) return false;
+      if (candidate.type !== 'point' && candidate.type !== 'period') return false;
+
+      if (isCrossTrack) {
+        return candidate.trackId === null;
+      }
+
+      return candidate.trackId === event.trackId;
+    });
+
+    const getAnchorYear = (candidate) => {
+      if (candidate.trackId === null) {
+        return candidate.type === 'point' ? candidate.masterDate?.year : candidate.masterStartDate?.year;
+      }
+      return candidate.type === 'point' ? candidate.date?.year : candidate.startDate?.year;
+    };
+
+    return [...candidates].sort((a, b) => (getAnchorYear(a) || 0) - (getAnchorYear(b) || 0));
+  }, [allEvents, event.id, event.trackId, isCrossTrack, isUndated]);
+
   // Initialize form with all editable fields including dates
   const getInitialFormState = () => {
     const base = {
       title: event.title,
       description: event.description || '',
       image: event.image || '',
-      tags: (event.tags || []).join(', '),
+      selectedTags: event.tags || [],
     };
 
-    if (isCrossTrack) {
+    if (isUndated) {
+      base.afterEvent = event.afterEvent || '';
+      base.beforeEvent = event.beforeEvent || '';
+    } else if (isCrossTrack) {
       if (event.type === 'point') {
         base.masterYear = event.masterDate?.year || 0;
       } else if (event.type === 'period') {
@@ -70,15 +100,21 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
   const [form, setForm] = useState(getInitialFormState);
 
   const handleSave = () => {
+    const normalizedTitle = form.title.trim().slice(0, EVENT_TITLE_MAX_LENGTH);
+    if (!normalizedTitle) return;
+
     const updates = {
-      title: form.title.trim(),
+      title: normalizedTitle,
       description: form.description.trim(),
       image: form.image.trim() || null,
-      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: form.selectedTags,
     };
 
     // Update date fields based on event type
-    if (isCrossTrack) {
+    if (isUndated) {
+      updates.afterEvent = form.afterEvent || null;
+      updates.beforeEvent = form.beforeEvent || null;
+    } else if (isCrossTrack) {
       if (event.type === 'point') {
         updates.masterDate = { year: parseInt(form.masterYear) };
       } else if (event.type === 'period') {
@@ -103,6 +139,8 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
       deleteEvent(event.id);
     }
   };
+
+  const resolvedTags = useMemo(() => getResolvedEventTags(event.tags || [], timelineMeta?.tagDefinitions || [], theme), [event.tags, timelineMeta?.tagDefinitions, theme]);
 
   const inputClass = theme === 'fantasy'
     ? 'bg-fantasy-bg border border-fantasy-border/60 text-fantasy-text font-fantasy-body px-2 py-1.5 w-full text-sm focus:outline-none focus:border-fantasy-accent'
@@ -145,13 +183,19 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
                 data-testid="edit-title-input"
                 type="text"
                 value={form.title}
-                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value.slice(0, EVENT_TITLE_MAX_LENGTH) }))}
                 className={`${inputClass} text-lg font-bold`}
+                maxLength={EVENT_TITLE_MAX_LENGTH}
               />
             ) : (
               <h3 className={`text-xl font-bold leading-tight ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-base text-scifi-accent'}`}>
                 {event.title}
               </h3>
+            )}
+            {editing && (
+              <p className={`text-[10px] mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+                {form.title.length}/{EVENT_TITLE_MAX_LENGTH} characters
+              </p>
             )}
 
             {/* Cross-track badge */}
@@ -163,6 +207,13 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
             )}
 
             {/* Track-specific year display (non-editing) */}
+            {!editing && isUndated && (
+              <div className={`flex items-center gap-1.5 mt-1.5 text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                <HelpCircle size={13} />
+                <span>Undated event anchored between timeline reference points</span>
+              </div>
+            )}
+
             {!isCrossTrack && !editing && yearDisplay && (
               <div className={`flex items-center gap-1.5 mt-1.5 text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
                 <MapPin size={13} />
@@ -205,7 +256,54 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
         {/* Year editing fields (when editing) */}
         {editing && (
           <div className="px-5 pt-4 relative z-10">
-            {isCrossTrack ? (
+            {isUndated ? (
+              <div className="grid gap-3 mb-3">
+                <div>
+                  <label className={labelClass}>After Event (earlier anchor)</label>
+                  <select
+                    data-testid="edit-after-event-select"
+                    value={form.afterEvent || ''}
+                    onChange={e => setForm(f => ({ ...f, afterEvent: e.target.value }))}
+                    className={inputClass}
+                  >
+                    <option value="">{isCrossTrack ? '— Timeline Start —' : `— ${track?.name || 'Track'} Start —`}</option>
+                    {anchorEvents.map(anchor => {
+                      const anchorYear = anchor.trackId === null
+                        ? (anchor.type === 'point' ? anchor.masterDate?.year : anchor.masterStartDate?.year)
+                        : (anchor.type === 'point' ? anchor.date?.year : anchor.startDate?.year);
+                      const anchorAbbr = anchor.trackId === null ? '' : (track?.abbr || '');
+                      return (
+                        <option key={anchor.id} value={anchor.id}>
+                          {anchor.title} ({anchorYear} {anchorAbbr})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Before Event (later anchor)</label>
+                  <select
+                    data-testid="edit-before-event-select"
+                    value={form.beforeEvent || ''}
+                    onChange={e => setForm(f => ({ ...f, beforeEvent: e.target.value }))}
+                    className={inputClass}
+                  >
+                    <option value="">{isCrossTrack ? '— Timeline End —' : `— ${track?.name || 'Track'} End —`}</option>
+                    {anchorEvents.map(anchor => {
+                      const anchorYear = anchor.trackId === null
+                        ? (anchor.type === 'point' ? anchor.masterDate?.year : anchor.masterStartDate?.year)
+                        : (anchor.type === 'point' ? anchor.date?.year : anchor.startDate?.year);
+                      const anchorAbbr = anchor.trackId === null ? '' : (track?.abbr || '');
+                      return (
+                        <option key={anchor.id} value={anchor.id}>
+                          {anchor.title} ({anchorYear} {anchorAbbr})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+            ) : isCrossTrack ? (
               // Cross-track event: edit reference year(s)
               event.type === 'point' ? (
                 <div className="mb-3">
@@ -361,31 +459,52 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
         <div className="px-5 pb-4 relative z-10">
           {editing ? (
             <>
-              <label className={labelClass}>Tags (comma-separated)</label>
-              <input
-                data-testid="edit-tags-input"
-                type="text"
-                value={form.tags}
-                onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-                className={inputClass}
-                placeholder="war, magic, discovery"
-              />
+              <label className={labelClass}>Tags</label>
+              {timelineMeta?.tagDefinitions?.length ? (
+                <div className="flex flex-wrap gap-2" data-testid="edit-tags-input">
+                  {timelineMeta.tagDefinitions.map(tag => {
+                    const isSelected = form.selectedTags.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        data-testid={`edit-tag-option-${tag.id}`}
+                        onClick={() => setForm(f => ({
+                          ...f,
+                          selectedTags: isSelected
+                            ? f.selectedTags.filter(existingTagId => existingTagId !== tag.id)
+                            : [...f.selectedTags, tag.id]
+                        }))}
+                        className={`px-3 py-1.5 text-xs font-bold border transition-all ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}
+                        style={{
+                          backgroundColor: isSelected ? tag.color : 'transparent',
+                          color: isSelected ? getReadableTextColor(tag.color) : tag.color,
+                          borderColor: tag.color,
+                        }}
+                      >
+                        {tag.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={`p-3 text-xs ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30 text-fantasy-muted' : 'bg-scifi-bg/50 border border-scifi-border/30 text-scifi-muted'}`}>
+                  No timeline tags are defined yet.
+                </div>
+              )}
             </>
-          ) : event.tags && event.tags.length > 0 ? (
+          ) : resolvedTags.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
-              {event.tags.map(tag => {
-                const color = getTagColor(tag, theme);
-                return (
-                  <span
-                    key={tag}
-                    data-testid={`tag-${tag}`}
-                    className="px-2 py-0.5 text-xs font-bold"
-                    style={{ backgroundColor: color.bg, color: color.text }}
-                  >
-                    {tag}
-                  </span>
-                );
-              })}
+              {resolvedTags.map(tag => (
+                <span
+                  key={tag.id}
+                  data-testid={`tag-${tag.id}`}
+                  className="px-2 py-0.5 text-xs font-bold"
+                  style={{ backgroundColor: tag.color, color: tag.textColor }}
+                >
+                  {tag.label}
+                </span>
+              ))}
             </div>
           ) : null}
         </div>

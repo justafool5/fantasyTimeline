@@ -2,17 +2,15 @@ import React, { useState } from 'react';
 import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
-import { X, Save, Trash2 } from 'lucide-react';
+import { X, Save, Trash2, Tags } from 'lucide-react';
 
-export default function EditTimelineForm({ onClose }) {
+export default function EditTimelineForm({ onClose, onEditTags }) {
   const { timelineMeta, updateTimelineMeta, clearLocalData, localEvents, localTracks } = useTimeline();
   const { theme } = useTheme();
 
   const [form, setForm] = useState({
     title: timelineMeta?.title || '',
     description: timelineMeta?.description || '',
-    masterStart: timelineMeta?.masterStart || -1000,
-    masterEnd: timelineMeta?.masterEnd || 2000,
   });
 
   const handleSubmit = (e) => {
@@ -22,8 +20,6 @@ export default function EditTimelineForm({ onClose }) {
     updateTimelineMeta({
       title: form.title.trim(),
       description: form.description.trim(),
-      masterStart: parseInt(form.masterStart),
-      masterEnd: parseInt(form.masterEnd),
     });
     onClose();
   };
@@ -108,31 +104,45 @@ export default function EditTimelineForm({ onClose }) {
           />
         </div>
 
-        {/* Master Range */}
+        {/* Tag Definitions */}
+        <div className="mb-4">
+          <label className={labelClass}>Timeline Tags</label>
+          <div className={`p-3 ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30' : 'bg-scifi-bg/50 border border-scifi-border/30'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                {timelineMeta?.tagDefinitions?.length
+                  ? `${timelineMeta.tagDefinitions.length} canonical tag definition(s) configured.`
+                  : 'No canonical tags defined yet.'}
+              </p>
+              <button
+                type="button"
+                data-testid="edit-tag-definitions-btn"
+                onClick={onEditTags}
+                className={`flex items-center gap-2 px-3 py-2 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/10 text-fantasy-accent border border-fantasy-accent/30 font-fantasy-heading hover:bg-fantasy-accent/20' : 'bg-scifi-accent/10 text-scifi-accent border border-scifi-accent/30 font-scifi-heading hover:bg-scifi-accent/20'}`}
+              >
+                <Tags size={14} /> Edit Tags
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Derived Range */}
         <div className="mb-6">
           <label className={labelClass}>Reference Frame Range</label>
           <p className={`text-xs mb-2 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
-            The internal coordinate system used to align all tracks. Not displayed to users.
+            This range is derived automatically from the minimum and maximum of all tracks, including their epochs.
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid grid-cols-2 gap-3 p-3 ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30' : 'bg-scifi-bg/50 border border-scifi-border/30'}`}>
             <div>
-              <input
-                data-testid="timeline-master-start-input"
-                type="number"
-                value={form.masterStart}
-                onChange={e => setForm(f => ({ ...f, masterStart: e.target.value }))}
-                className={inputClass}
-              />
+              <div className={inputClass}>
+                {timelineMeta?.masterStart ?? '—'}
+              </div>
               <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>Start</p>
             </div>
             <div>
-              <input
-                data-testid="timeline-master-end-input"
-                type="number"
-                value={form.masterEnd}
-                onChange={e => setForm(f => ({ ...f, masterEnd: e.target.value }))}
-                className={inputClass}
-              />
+              <div className={inputClass}>
+                {timelineMeta?.masterEnd ?? '—'}
+              </div>
               <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>End</p>
             </div>
           </div>

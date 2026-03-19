@@ -3,6 +3,20 @@
  */
 
 /**
+ * Default track colors palette
+ */
+export const TRACK_COLORS = [
+  '#c9a84c', // gold
+  '#4a9eff', // blue
+  '#50c878', // emerald
+  '#ff6b6b', // coral
+  '#9b59b6', // purple
+  '#e67e22', // orange
+  '#1abc9c', // teal
+  '#e91e63', // pink
+];
+
+/**
  * Convert a local year in a track's calendar to master year
  */
 export function localToMaster(localYear, track) {
@@ -21,14 +35,12 @@ export function masterToLocal(masterYear, track) {
  */
 export function getEventMasterYear(event, tracks) {
   if (event.trackId === null) {
-    // Cross-track event uses master dates
     if (event.type === 'point') {
       return event.masterDate.year;
     } else if (event.type === 'period') {
       return event.masterStartDate.year;
     }
   } else {
-    // Track-specific event uses local dates
     const track = tracks.find(t => t.id === event.trackId);
     if (!track) return null;
     if (event.type === 'point') {
@@ -45,7 +57,7 @@ export function getEventMasterYear(event, tracks) {
  */
 export function getEventMasterRange(event, tracks) {
   if (event.type !== 'period') return null;
-  
+
   if (event.trackId === null) {
     return {
       start: event.masterStartDate.year,
@@ -66,17 +78,17 @@ export function getEventMasterRange(event, tracks) {
  */
 export function calculateMasterRange(tracks) {
   if (!tracks || tracks.length === 0) return { start: 0, end: 1000 };
-  
+
   let minMaster = Infinity;
   let maxMaster = -Infinity;
-  
+
   for (const track of tracks) {
     const trackMasterStart = localToMaster(track.startYear, track);
     const trackMasterEnd = localToMaster(track.endYear, track);
     minMaster = Math.min(minMaster, trackMasterStart);
     maxMaster = Math.max(maxMaster, trackMasterEnd);
   }
-  
+
   return { start: minMaster, end: maxMaster };
 }
 
@@ -85,9 +97,9 @@ export function calculateMasterRange(tracks) {
  */
 export function resolveTrackEventPositions(events, track, masterRange, pixelsPerYear) {
   const positions = {};
-  
+
   const trackEvents = events.filter(e => e.trackId === track.id);
-  
+
   for (const evt of trackEvents) {
     if (evt.type === 'point') {
       const masterYear = localToMaster(evt.date.year, track);
@@ -102,14 +114,13 @@ export function resolveTrackEventPositions(events, track, masterRange, pixelsPer
         isFuzzy: false
       };
     } else if (evt.type === 'undated') {
-      // Handle undated events within track
       positions[evt.id] = {
-        x: 0, // Will be computed separately
+        x: 0,
         isFuzzy: true
       };
     }
   }
-  
+
   return positions;
 }
 
@@ -118,9 +129,9 @@ export function resolveTrackEventPositions(events, track, masterRange, pixelsPer
  */
 export function resolveCrossTrackEventPositions(events, masterRange, pixelsPerYear) {
   const positions = {};
-  
+
   const crossTrackEvents = events.filter(e => e.trackId === null);
-  
+
   for (const evt of crossTrackEvents) {
     if (evt.type === 'point') {
       positions[evt.id] = {
@@ -135,7 +146,7 @@ export function resolveCrossTrackEventPositions(events, masterRange, pixelsPerYe
       };
     }
   }
-  
+
   return positions;
 }
 
@@ -143,22 +154,21 @@ export function resolveCrossTrackEventPositions(events, masterRange, pixelsPerYe
  * Get period bar dimensions for a track event (handles both track-specific and cross-track)
  */
 export function getTrackPeriodBarDimensions(event, track, masterRange, pixelsPerYear) {
-  let startMaster, endMaster;
-  
+  let startMaster;
+  let endMaster;
+
   if (event.trackId === null) {
-    // Cross-track event uses master dates
     startMaster = event.masterStartDate?.year;
     endMaster = event.masterEndDate?.year;
   } else {
-    // Track-specific event uses local dates
     startMaster = localToMaster(event.startDate?.year, track);
     endMaster = localToMaster(event.endDate?.year, track);
   }
-  
+
   if (startMaster === undefined || endMaster === undefined) {
     return { left: 0, width: 0 };
   }
-  
+
   return {
     left: (startMaster - masterRange.start) * pixelsPerYear,
     width: (endMaster - startMaster) * pixelsPerYear
@@ -186,26 +196,24 @@ export function positionToLocalYear(x, track, masterRange, pixelsPerYear) {
 export function generateTrackYearMarkers(track, masterRange, pixelsPerYear) {
   const trackMasterStart = localToMaster(track.startYear, track);
   const trackMasterEnd = localToMaster(track.endYear, track);
-  
-  // Clamp to visible master range
+
   const visibleStart = Math.max(trackMasterStart, masterRange.start);
   const visibleEnd = Math.min(trackMasterEnd, masterRange.end);
-  
+
   const localVisibleStart = masterToLocal(visibleStart, track);
   const localVisibleEnd = masterToLocal(visibleEnd, track);
   const range = localVisibleEnd - localVisibleStart;
-  
-  // Calculate step based on zoom level
+
   let step;
   if (range * pixelsPerYear < 400) step = Math.max(1, Math.floor(range / 8));
   else if (pixelsPerYear > 3) step = 50;
   else if (pixelsPerYear > 1) step = 100;
   else if (pixelsPerYear > 0.5) step = 200;
   else step = 500;
-  
+
   const markers = [];
   const start = Math.ceil(localVisibleStart / step) * step;
-  
+
   for (let localYear = start; localYear <= localVisibleEnd; localYear += step) {
     const masterYear = localToMaster(localYear, track);
     markers.push({
@@ -213,7 +221,7 @@ export function generateTrackYearMarkers(track, masterRange, pixelsPerYear) {
       x: (masterYear - masterRange.start) * pixelsPerYear
     });
   }
-  
+
   return markers;
 }
 
@@ -243,9 +251,6 @@ export function getEquivalentYears(masterYear, tracks) {
   }));
 }
 
-/**
- * Get a consistent color for a tag
- */
 const TAG_COLORS_FANTASY = [
   { bg: '#8a0303', text: '#f9f1d8' },
   { bg: '#1a5c1a', text: '#f9f1d8' },
@@ -279,19 +284,125 @@ function hashString(str) {
 
 export function getTagColor(tag, theme) {
   const colors = theme === 'fantasy' ? TAG_COLORS_FANTASY : TAG_COLORS_SCIFI;
-  return colors[hashString(tag) % colors.length];
+  return colors[hashString(String(tag || 'tag')) % colors.length];
 }
 
-/**
- * Default track colors palette
- */
-export const TRACK_COLORS = [
-  '#c9a84c', // gold
-  '#4a9eff', // blue
-  '#50c878', // emerald
-  '#ff6b6b', // coral
-  '#9b59b6', // purple
-  '#e67e22', // orange
-  '#1abc9c', // teal
-  '#e91e63', // pink
-];
+export function normalizeTagId(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+export function normalizeTagDefinitions(definitions = []) {
+  const normalized = [];
+  const seen = new Map();
+
+  definitions.forEach((definition, index) => {
+    const label = String(definition?.label || '').trim();
+    if (!label) return;
+
+    const normalizedDefinition = {
+      id: normalizeTagId(definition?.id || label) || `tag-${index + 1}`,
+      label,
+      color: definition?.color || TRACK_COLORS[index % TRACK_COLORS.length],
+    };
+
+    if (seen.has(normalizedDefinition.id)) {
+      normalized[seen.get(normalizedDefinition.id)] = normalizedDefinition;
+    } else {
+      seen.set(normalizedDefinition.id, normalized.length);
+      normalized.push(normalizedDefinition);
+    }
+  });
+
+  return normalized;
+}
+
+export function findMatchingTagDefinition(tagValue, tagDefinitions = []) {
+  if (!tagValue) return null;
+
+  const normalizedValue = normalizeTagId(tagValue);
+  return tagDefinitions.find((definition) => {
+    const normalizedId = normalizeTagId(definition?.id);
+    const normalizedLabel = normalizeTagId(definition?.label);
+    return definition?.id === tagValue || normalizedId === normalizedValue || normalizedLabel === normalizedValue;
+  }) || null;
+}
+
+export function getDefinedEventTagIds(tags = [], tagDefinitions = []) {
+  const matched = tags
+    .map(tag => findMatchingTagDefinition(tag, tagDefinitions))
+    .filter(Boolean)
+    .map(definition => definition.id);
+
+  return Array.from(new Set(matched));
+}
+
+export function getUndefinedEventTags(tags = [], tagDefinitions = []) {
+  const unmatched = tags.filter(tag => !findMatchingTagDefinition(tag, tagDefinitions));
+  return Array.from(new Set(unmatched));
+}
+
+export function pruneUnknownEventTags(tags = [], tagDefinitions = []) {
+  return getDefinedEventTagIds(tags, tagDefinitions);
+}
+
+export function sanitizeEventsForTagDefinitions(events = [], tagDefinitions = []) {
+  return events.map((event) => {
+    const nextEvent = {
+      ...event,
+      tags: pruneUnknownEventTags(event.tags || [], tagDefinitions),
+    };
+
+    if (event.children?.length) {
+      nextEvent.children = sanitizeEventsForTagDefinitions(event.children, tagDefinitions);
+    }
+
+    return nextEvent;
+  });
+}
+
+export function getReadableTextColor(backgroundColor) {
+  const hex = String(backgroundColor || '').replace('#', '');
+  if (![3, 6].includes(hex.length)) return '#ffffff';
+
+  const fullHex = hex.length === 3
+    ? hex.split('').map(char => char + char).join('')
+    : hex;
+
+  const r = parseInt(fullHex.slice(0, 2), 16);
+  const g = parseInt(fullHex.slice(2, 4), 16);
+  const b = parseInt(fullHex.slice(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+  return brightness > 160 ? '#111111' : '#ffffff';
+}
+
+export function getResolvedEventTags(tags = [], tagDefinitions = [], theme = 'fantasy') {
+  return Array.from(new Set(tags)).map((tagValue) => {
+    const definition = findMatchingTagDefinition(tagValue, tagDefinitions);
+    if (definition) {
+      const resolvedColor = definition.color || getTagColor(definition.id, theme).bg;
+      return {
+        id: definition.id,
+        label: definition.label,
+        color: resolvedColor,
+        textColor: getReadableTextColor(resolvedColor),
+        isDefined: true,
+      };
+    }
+
+    const fallback = getTagColor(tagValue, theme);
+    return {
+      id: normalizeTagId(tagValue) || String(tagValue),
+      label: String(tagValue),
+      color: fallback.bg,
+      textColor: fallback.text,
+      isDefined: false,
+    };
+  });
+}

@@ -3,14 +3,14 @@ import { useTimeline } from '../contexts/TimelineContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
 import { X, Plus, Globe, HelpCircle } from 'lucide-react';
-import { formatYear } from '../utils/timelineUtils';
+import { getReadableTextColor } from '../utils/timelineUtils';
+const EVENT_TITLE_MAX_LENGTH = 40;
 
 export default function AddEventForm({ trackId, year, crossTrack, masterYear, parentPeriodId, forceCrossTrack, onClose }) {
-  const { addEvent, allTracks, allEvents } = useTimeline();
+  const { addEvent, allTracks, allEvents, timelineMeta } = useTimeline();
   const { theme } = useTheme();
 
   const initialTrack = trackId || (allTracks.length > 0 ? allTracks[0].id : null);
-  const currentTrack = allTracks.find(t => t.id === initialTrack);
   
   // When adding to a track-specific period, disable cross-track option
   // When adding to a cross-track period (forceCrossTrack), force cross-track mode
@@ -26,7 +26,7 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
     masterEndYear: (masterYear || 0) + 100,
     description: '',
     image: '',
-    tags: '',
+    selectedTags: [],
     trackId: initialTrack,
     isCrossTrack: forceCrossTrack ? true : (isAddingToParent ? false : (crossTrack || false)),
     // Undated event anchors
@@ -71,14 +71,15 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.title.trim()) return;
+    const normalizedTitle = form.title.trim().slice(0, EVENT_TITLE_MAX_LENGTH);
+    if (!normalizedTitle) return;
 
     const event = {
       type: form.type,
-      title: form.title.trim(),
+      title: normalizedTitle,
       description: form.description.trim(),
       image: form.image.trim() || null,
-      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: form.selectedTags,
     };
 
     if (form.type === 'undated') {
@@ -163,11 +164,15 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
             data-testid="event-title-input"
             type="text"
             value={form.title}
-            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            onChange={e => setForm(f => ({ ...f, title: e.target.value.slice(0, EVENT_TITLE_MAX_LENGTH) }))}
             className={inputClass}
             placeholder="Event name..."
+            maxLength={EVENT_TITLE_MAX_LENGTH}
             required
           />
+          <p className={`text-[10px] mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+            {form.title.length}/{EVENT_TITLE_MAX_LENGTH} characters
+          </p>
         </div>
 
         {/* Cross-Track Toggle - disabled when adding sub-events to track-specific period */}
@@ -416,16 +421,40 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
         </div>
 
         {/* Tags */}
-        <div className="mb-6">
-          <label className={labelClass}>Tags (comma-separated)</label>
-          <input
-            data-testid="event-tags-input"
-            type="text"
-            value={form.tags}
-            onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-            className={inputClass}
-            placeholder="war, magic, discovery"
-          />
+        <div className="mb-6" data-testid="event-tags-input">
+          <label className={labelClass}>Tags</label>
+          {timelineMeta?.tagDefinitions?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {timelineMeta.tagDefinitions.map(tag => {
+                const isSelected = form.selectedTags.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    data-testid={`event-tag-option-${tag.id}`}
+                    onClick={() => setForm(f => ({
+                      ...f,
+                      selectedTags: isSelected
+                        ? f.selectedTags.filter(existingTagId => existingTagId !== tag.id)
+                        : [...f.selectedTags, tag.id]
+                    }))}
+                    className={`px-3 py-1.5 text-xs font-bold border transition-all ${theme === 'fantasy' ? 'font-fantasy-heading' : 'font-scifi-heading'}`}
+                    style={{
+                      backgroundColor: isSelected ? tag.color : 'transparent',
+                      color: isSelected ? getReadableTextColor(tag.color) : tag.color,
+                      borderColor: tag.color,
+                    }}
+                  >
+                    {tag.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={`p-3 text-xs ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30 text-fantasy-muted' : 'bg-scifi-bg/50 border border-scifi-border/30 text-scifi-muted'}`}>
+              No timeline tags defined yet. Add them from timeline settings to reuse canonical tags here.
+            </div>
+          )}
         </div>
 
         {/* Submit */}

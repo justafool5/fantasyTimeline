@@ -1,78 +1,46 @@
 # ChronoWeave — Technical Reference
 
-> This document is the authoritative reference for any future development on this project.  
-> Read it fully before making changes.
+> Authoritative implementation notes for the current app state.
 
 ---
 
 ## 1. Architecture overview
 
-ChronoWeave is a **pure static frontend app** — no backend, no database.
+ChronoWeave is a static React app. The repository root is also the GitHub Pages deployment root.
 
-```
-/                              ← repo root (also the GH Pages deployment root)
-  index.html                   ← built entry point
-  static/js/main.js            ← built app bundle
-  static/css/main.css          ← built styles
-  data/                        ← timeline JSON data (served statically)
-    manifest.json
-    ages-of-eldoria.json
-    galactic-chronicles.json
+```text
+/                              ← deployed site root
+  index.html
+  static/js/main.js
+  static/css/main.css
+  data/
   docs/
-    README.md                  ← user-facing docs
-    TECHNICAL.md               ← this file
-
-  frontend/                    ← React source (not served by GH Pages)
-    public/
-      data/                    ← source data files
-        manifest.json
-        ages-of-eldoria.json
-        galactic-chronicles.json
-      index.html
+  frontend/                    ← source app
+    public/data/
     src/
       contexts/
-        ThemeContext.js
-        TimelineContext.js
       components/
-        TimelineView.js
-        EventCard.js
-        SubTimeline.js
-        AddEventForm.js
-        ThemeSwitcher.js
-        TimelinePicker.js
-        ZoomControls.js
-        JsonDownloadButton.js
       utils/
-        timelineUtils.js
-      App.js
-      index.js
-      index.css
-    config-overrides.js
-    tailwind.config.js
-    postcss.config.js
 ```
+
+No backend. No database. Runtime persistence is browser `localStorage`.
 
 ---
 
-## 2. Tech stack
+## 2. Stack
 
-| Layer       | Technology                | Version   | Purpose                         |
-|-------------|---------------------------|-----------|---------------------------------|
-| UI          | React                     | 19        | Component framework             |
-| Styling     | Tailwind CSS              | 3.4       | Utility-first CSS               |
-| Animation   | Framer Motion             | 12        | Card expansion, sub-timeline    |
-| Icons       | Lucide React              | 0.577     | UI icons                        |
-| Build       | Create React App          | 5         | Toolchain                       |
-| Build tweak | react-app-rewired         | 2.2       | Stable output filenames         |
-| Fonts       | Google Fonts              | —         | Cormorant Garamond, Lato, Orbitron, Rajdhani |
-
-No runtime backend. No database. All persistence is browser `localStorage`.
+- React 19
+- Tailwind CSS 3.4
+- Framer Motion 12
+- Lucide React
+- Create React App 5 with `react-app-rewired`
+- Stable production filenames for GitHub Pages
 
 ---
 
 ## 3. Data model
 
-### manifest.json
+### Manifest
 
 ```json
 {
@@ -81,8 +49,8 @@ No runtime backend. No database. All persistence is browser `localStorage`.
       "id": "unique-slug",
       "title": "Display Name",
       "description": "Short description",
-      "url": "data/filename.json",
-      "defaultTheme": "fantasy" | "scifi"
+      "url": "data/file.json",
+      "defaultTheme": "fantasy"
     }
   ]
 }
@@ -94,225 +62,223 @@ No runtime backend. No database. All persistence is browser `localStorage`.
 {
   "timeline": {
     "title": "Display Name",
-    "startYear": -3000,
-    "endYear": 1500
+    "description": "Short description",
+    "tagDefinitions": [
+      { "id": "war", "label": "War", "color": "#8a0303" }
+    ]
   },
-  "events": [ ... ]
+  "tracks": [],
+  "events": []
 }
 ```
 
-### Event types
+### Tracks
 
-**Point** — exact date:
+Tracks define the visible reference frame. Timeline limits are derived automatically from the minimum and maximum track ranges after applying each track epoch.
+
+Required fields:
+
+- `id`
+- `name`
+- `calendarName`
+- `abbr`
+- `epoch`
+- `startYear`
+- `endYear`
+- `color`
+
+### Events
+
+Supported event types:
+
+- `point`
+- `period`
+- `undated`
+
+Shared fields:
+
+- `id`
+- `title`
+- `description`
+- `image`
+- `tags`
+
+#### Point event
+
 ```json
 {
-  "id": "evt-unique",
+  "id": "evt-1",
   "type": "point",
-  "title": "Event Name",
-  "date": { "year": -1200, "month": 3, "day": 15 },
-  "description": "Long text",
-  "image": "https://url-or-null",
-  "tags": ["tag1", "tag2"]
+  "trackId": "track-1",
+  "title": "Event",
+  "date": { "year": 100 },
+  "tags": ["war"]
 }
 ```
-Only `year` is required; `month` and `day` are optional (unused in positioning today, reserved for future zoom levels).
 
-**Period** — date range, with optional sub-events:
+#### Period event
+
 ```json
 {
-  "id": "evt-unique",
+  "id": "evt-2",
   "type": "period",
-  "title": "Event Name",
-  "startDate": { "year": -1800 },
-  "endDate": { "year": -1650 },
-  "description": "...",
-  "image": "https://...",
-  "tags": ["war"],
-  "children": [
-    { "id": "sub-1", "type": "point", "title": "...", "date": { "year": -1780 }, ... }
-  ]
+  "trackId": "track-1",
+  "title": "Campaign",
+  "startDate": { "year": 120 },
+  "endDate": { "year": 150 },
+  "children": []
 }
 ```
-Children appear in the inline sub-timeline when the period bar is clicked.
 
-**Undated** — positioned between anchor events:
+#### Undated event
+
 ```json
 {
-  "id": "evt-unique",
+  "id": "evt-3",
   "type": "undated",
-  "title": "Event Name",
-  "afterEvent": "evt-id-or-null",
-  "beforeEvent": "evt-id-or-null",
-  "description": "...",
-  "image": null,
+  "trackId": "track-1",
+  "title": "Rumor",
+  "afterEvent": "evt-1",
+  "beforeEvent": "evt-2",
   "tags": ["mystery"]
 }
 ```
-- If `afterEvent` is `null`, the timeline start is used as anchor.
-- If `beforeEvent` is `null`, the timeline end is used as anchor.
-- Multiple undated events sharing the same anchors are evenly spaced.
-- Undated events render with a dashed/fuzzy marker style.
+
+Undated behavior:
+
+- `afterEvent = null` uses track/timeline start
+- `beforeEvent = null` uses track/timeline end
+- events sharing the same anchor pair are evenly spaced
+- optional `placementYear` overrides anchor interpolation for rendering only
+
+### Canonical tags
+
+`timeline.tagDefinitions` is the canonical registry for tags.
+
+```json
+{
+  "id": "war",
+  "label": "War",
+  "color": "#8a0303"
+}
+```
+
+Rules:
+
+- event tags store canonical ids
+- unknown tags are pruned automatically on load and edit
+- matching is normalized by id/label to clean older data such as `Join` vs `join`
 
 ---
 
-## 4. Design system — dual themes
+## 4. Current UX behavior
 
-The app has two fully independent visual themes. Theme state lives in `ThemeContext`. Every themed component reads `theme` from context and switches classes.
-
-| Property         | Fantasy                                | Sci-Fi                                 |
-|------------------|----------------------------------------|----------------------------------------|
-| Background       | `#f4e4bc` (parchment)                  | `#050510` (void)                       |
-| Text             | `#2c1810` (dark brown)                 | `#e0e0ff` (pale blue)                  |
-| Accent           | `#8a0303` (blood red)                  | `#00f3ff` (cyan neon)                  |
-| Border           | `#d4af37` (gold), double style         | `#0066cc` (blue), solid + glow         |
-| Heading font     | Cormorant Garamond (serif)             | Orbitron (geometric sans)              |
-| Body font        | Lato (sans)                            | Rajdhani (angular sans)                |
-| Markers          | Rounded circles                        | Rotated 45° diamonds                   |
-| Card style       | Sepia, ornate double borders           | Glass-morphism, backdrop blur, glow    |
-| Scrollbar        | Amber-brown thumb                      | Cyan glowing thumb                     |
-
-Fonts are loaded from Google Fonts via `@import` in `index.css`. All theme colors are defined in `tailwind.config.js` under `theme.extend.colors.fantasy` / `theme.extend.colors.scifi`.
+- Unlimited zoom in, minimum zoom out floor only
+- Zoom reset fits the active timeline or drilled-in period range
+- Timeline selector always fetches a fresh manifest
+- Dated events stay at their exact year; track content start is offset to leave room for labels
+- Event titles are capped at 40 characters in create/edit flows
+- Label layout is collision-aware and prefers earlier events when hiding later ones
+- Hidden labels show `...`
+- Nearby events cluster into count bubbles; clicking a cluster recenters and zooms enough to try splitting it
+- Visible labels can show up to 3 colored tag chips plus overflow text
+- Hidden labels can show tiny colored rectangular tag chips
 
 ---
 
-## 5. Core algorithms
+## 5. Core rendering notes
 
-### Event positioning (`utils/timelineUtils.js`)
+### Ranges and zoom
 
-`resolveEventPositions(events, timelineMeta, pixelsPerYear)` → `{ positions, totalWidth }`
+- `masterRange` is derived from all tracks
+- sub-timeline drill-in computes an `effectiveMasterRange`
+- `pixelsPerYear = BASE_PX_PER_YEAR * zoom`
+- track content starts after a left offset so labels do not force dated markers away from their true position
 
-1. **Dated events** (point + period): `x = (year - startYear) * pixelsPerYear`
-2. **Undated events**: grouped by anchor pair, then evenly spaced between the anchor positions (or timeline bounds if anchor is null).
+### Label handling
 
-### Zoom
+- titles are split into balanced lines without splitting words
+- labels alternate above/below
+- per-row collision detection hides later labels first
+- hidden labels retain a visible cue via `...`
 
-- `pixelsPerYear = BASE_PX_PER_YEAR * zoom` (base = 0.8)
-- Zoom range: 0.1× – 10×
-- Changed via Ctrl+Scroll (wheel event), or zoom buttons
+### Clustering
 
-### Year markers
-
-Auto-calculated step sizes based on zoom level to avoid crowding: 500 → 200 → 100 → 50 years.
-
-### Alternating placement
-
-Events are sorted by x-position, then assigned `above: index % 2 === 0` for visual alternation.
+- nearby markers are grouped by pixel distance
+- cluster click computes a centered zoom target based on spread and smallest gap
 
 ---
 
-## 6. Local events & persistence
+## 6. Persistence
 
-- Added via click-on-timeline → form.
-- Stored in `localStorage` under key `chronoweave_local_events_{timelineId}`.
-- Merged with JSON-loaded events in `TimelineContext.allEvents`.
-- Marked with `isLocal: true` — shown with a "Local event" badge and a delete button.
-- Downloadable as JSON via the export button (bottom-left, visible only when local events exist).
+- local events: `chronoweave_local_events_{timelineId}`
+- local tracks: `chronoweave_local_tracks_{timelineId}`
+- stale local timeline metadata is intentionally cleared so deployed manifest data stays authoritative
 
 ---
 
-## 7. Development workflow
+## 7. Key source files
 
-### Prerequisites
+- `frontend/src/contexts/TimelineContext.js` — data loading, derived bounds, local persistence, tag cleanup
+- `frontend/src/components/TimelineView.js` — track rendering, labels, clusters, hidden cues, visible timeline tag chips
+- `frontend/src/components/EventCard.js` — event detail and edit UI with canonical tag chips
+- `frontend/src/components/AddEventForm.js` — event creation with canonical tag selection
+- `frontend/src/components/EditTimelineForm.js` — timeline settings
+- `frontend/src/components/EditTagDefinitionsForm.js` — timeline-level tag registry editor
+- `frontend/src/utils/timelineUtils.js` — range math, placement helpers, tag normalization/resolution
 
-- Node.js ≥ 18
-- Yarn 1.x
+---
 
-### Install & run (dev mode)
+## 8. Build and deploy
+
+Local build:
 
 ```bash
 cd frontend
-yarn install
-yarn start          # → http://localhost:3000
+npm ci
+GENERATE_SOURCEMAP=false npm run build
 ```
 
-Hot-reload is active. Edit any file under `src/` and see changes instantly.
-
-### Build for production
+Deploy sync to repo root:
 
 ```bash
-cd frontend
-GENERATE_SOURCEMAP=false yarn build
+rm -rf static
+cp -R frontend/build/static ./static
+cp frontend/build/index.html ./index.html
+cp frontend/build/asset-manifest.json ./asset-manifest.json
+cp frontend/build/favicon.ico ./favicon.ico
+cp frontend/build/manifest.json ./manifest.json
+cp frontend/build/robots.txt ./robots.txt
 ```
 
-Output: `frontend/build/` — a self-contained static site.
-
-The build uses `react-app-rewired` with `config-overrides.js` to produce **stable filenames** (`main.js`, `main.css`, no content hashes). This means the output filenames are deterministic and diff-friendly in version control.
-
-### Deploy to GitHub Pages
-
-The repo root **is** the deployment target. After building, the root contains `index.html`, `static/`, and `data/` — GitHub Pages serves these directly.
-
-1. Build: `cd frontend && GENERATE_SOURCEMAP=false yarn build`
-2. Copy output to repo root: `cp -r frontend/build/* .`
-3. Commit and push the root-level files (`index.html`, `static/`, `data/`, `favicon.ico`, etc.)
-4. Enable GitHub Pages on the `main` branch, root folder (`/`)
-
-The `homepage` field in `package.json` is set to `https://justafool5.github.io/fantasyTimeline/`, which makes all asset paths absolute to that base (e.g. `/fantasyTimeline/static/js/main.js`). Change this if deploying elsewhere.
-
-**Repo structure for deployment:**
-```
-/                          ← repo root = GitHub Pages root
-  index.html               ← entry point (served by GH Pages)
-  static/js/main.js        ← app bundle (stable filename)
-  static/css/main.css      ← styles (stable filename)
-  data/manifest.json        ← timeline registry
-  data/ages-of-eldoria.json
-  data/galactic-chronicles.json
-  favicon.ico
-  docs/README.md            ← user documentation
-  docs/TECHNICAL.md         ← this file
-  frontend/                 ← source code (not served)
-```
-
-### Adding a new timeline
-
-1. Create `frontend/public/data/my-timeline.json` following the data model above.
-2. Add an entry to `frontend/public/data/manifest.json`.
-3. Rebuild and copy to root:
-```bash
-cd frontend && GENERATE_SOURCEMAP=false yarn build && cp -r build/* ..
-```
+GitHub Pages serves the repository root.
 
 ---
 
-## 8. File-by-file reference
+## 9. GitHub Action
 
-| File | Responsibility | Key exports |
-|------|---------------|-------------|
-| `contexts/ThemeContext.js` | Theme state + toggle | `ThemeProvider`, `useTheme` |
-| `contexts/TimelineContext.js` | All timeline state: data loading, local events, zoom, expansion | `TimelineProvider`, `useTimeline` |
-| `components/TimelineView.js` | Main renderer: axis, year markers, event markers, period bars, drag-scroll, click-to-add | default export |
-| `components/EventCard.js` | Expanded event detail card (image, description, tags, close, delete) | default export |
-| `components/SubTimeline.js` | Inline sub-timeline for period events | default export |
-| `components/AddEventForm.js` | Modal form: title, type, dates, description, image, tags | default export |
-| `components/ThemeSwitcher.js` | Top-right toggle button | default export |
-| `components/TimelinePicker.js` | Top-left dropdown to switch timelines | default export |
-| `components/ZoomControls.js` | Bottom-right zoom buttons | default export |
-| `components/JsonDownloadButton.js` | Bottom-left download button (conditional) | default export |
-| `utils/timelineUtils.js` | Positioning math, year formatting, tag color mapping | `resolveEventPositions`, `getPeriodBarDimensions`, `positionToYear`, `formatYear`, `getTagColor` |
-| `config-overrides.js` | Webpack override: stable filenames | module.exports |
+Workflow: `.github/workflows/build-sync.yml`
 
----
+What it does:
 
-## 9. Known limitations & future work
+- runs on pushes to `main` affecting frontend/docs/workflow files
+- installs frontend dependencies with `npm ci`
+- builds with `GENERATE_SOURCEMAP=false npm run build`
+- replaces root deployment assets from `frontend/build/`
+- commits regenerated assets back to `main` when they changed
 
-- **Month/day precision**: the data model supports month and day, but positioning currently uses year only. Higher precision can be added at a future zoom threshold.
-- **No mobile optimization**: drag-to-scroll works but there's no pinch-to-zoom or responsive layout for narrow screens yet.
-- **No search/filter**: planned as tag-based filtering.
-- **No import**: users can export local events as JSON but cannot import a JSON file back via the UI.
-- **Sub-timelines are one level deep**: nested period-within-period is not supported.
+Status check:
+
+- the workflow matches the current npm-based build flow
+- it disables source maps, which matches the documented deploy state
+- it copies the correct root assets and `static/` directory
+- the `github.actor != 'github-actions[bot]'` guard prevents commit loops
 
 ---
 
-## 10. Testing
+## 10. Current limitations
 
-All interactive elements carry `data-testid` attributes for automated testing:
-
-- `timeline-axis`, `timeline-title`
-- `event-marker-{id}`, `event-card-{id}`, `close-event-card-{id}`, `delete-event-{id}`
-- `period-bar-{id}`, `sub-timeline-{id}`, `sub-event-marker-{id}`
-- `theme-toggle`, `timeline-picker`, `timeline-picker-button`, `timeline-option-{id}`
-- `zoom-in-btn`, `zoom-out-btn`, `zoom-reset-btn`, `zoom-controls`
-- `add-event-overlay`, `add-event-form`, `submit-event-btn`, `close-add-form`
-- `event-title-input`, `event-year-input`, `event-type-{type}`, `event-description-input`, etc.
-- `json-download-btn`, `tag-{tagname}`
+- year-level positioning only; month/day are reserved
+- no mobile-first interaction model yet
+- no tag filtering/search yet
+- no UI for editing `placementYear`
