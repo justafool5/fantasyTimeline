@@ -3,7 +3,8 @@
     "title": "One last job...",
     "description": "Timeline of the major events in the party's history.",
     "masterStart": 0,
-    "masterEnd": 35
+    "masterEnd": 35,
+    "tagDefinitions": []
   },
   "tracks": [
     {
@@ -21,12 +22,14 @@
     {
       "id": "olj-001",
       "type": "point",
-      "title": "The Kindred Bound is founded by Rowena, Daniel, Marlaina and James",
-      "description": "The original party forms.",
-      "image": null,
+      "title": "The Kindred Bound is founded by Rowena, ",
+      "description": "While working at the local inn, Rowena followed a trail of clues that led to a series of hidden coastal caves. She met Daniel investigating the same trail, and Marlaina joined them when she realized the kidnapper was using dark magic that was sickening the local flora.\n\nThey discovered the children were being held by a Corrupt Magistrate who was selling them into forced labor. During the rescue, the trio was nearly cornered by the Magistrate’s hired thugs. It was James, who had picked his own locks, who slipped through the shadows to create a distraction, allowing Rowena and Daniel to break the line and Marlaina to entangle the remaining guards.\n\nBy the time the sun rose over Westfall, the children were safe, the Magistrate was in chains, and the four of them realized they didn't have to face the world alone anymore.",
+      "image": "https://i.ibb.co/HTLdS3zS/kindredforms.png",
       "tags": [],
       "trackId": "main-party",
-      "date": { "year": 0 }
+      "date": {
+        "year": 0
+      }
     },
     {
       "id": "olj-002",
@@ -58,7 +61,7 @@
       "title": "Andura joins",
       "description": "Andura joins the party.",
       "image": null,
-      "tags": ["join"],
+      "tags": [],
       "trackId": "main-party",
       "placementYear": 4,
       "afterEvent": null,
@@ -94,7 +97,7 @@
       "title": "Buckbarrow and his twin Froswick join the party",
       "description": "Buckbarrow and Froswick join the party.",
       "image": null,
-      "tags": ["join"],
+      "tags": [],
       "trackId": "main-party",
       "placementYear": 10,
       "afterEvent": null,
@@ -118,7 +121,7 @@
       "title": "Verity joins the party",
       "description": "Verity joins the party.",
       "image": null,
-      "tags": ["join"],
+      "tags": [],
       "trackId": "main-party",
       "placementYear": 14,
       "afterEvent": null,
@@ -154,7 +157,7 @@
       "title": "Marcan joins the party",
       "description": "Marcan joins the party.",
       "image": null,
-      "tags": ["join"],
+      "tags": [],
       "trackId": "main-party",
       "placementYear": 19,
       "afterEvent": null,
