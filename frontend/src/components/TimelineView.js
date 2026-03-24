@@ -26,7 +26,7 @@ const MIN_ZOOM = 0.1;
 const TIMELINE_PADDING = 120;
 const TRACK_HEIGHT = 180;
 const AXIS_OFFSET = 100;
-const EVENT_LABEL_WIDTH = 220;
+const EVENT_LABEL_WIDTH = 240;
 const EVENT_LABEL_GUTTER = 12;
 const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
 const CLUSTER_DISTANCE_PX = 18;
@@ -35,7 +35,7 @@ const CLUSTER_STACK_EPSILON_PX = 0.5;
 const STACK_DETAILS_WIDTH = 320;
 const MIN_LABEL_WIDTH = 80;
 const TARGET_LABEL_LINE_LENGTH = 22;
-const ESTIMATED_CHAR_WIDTH = 6.5;
+const ESTIMATED_CHAR_WIDTH = 7.5;
 const CROSS_TRACK_LABELS_HEIGHT = 50;
 const TRACK_NAME_MAX_LENGTH = 75;
 const CROSS_TRACK_CLUSTER_DISTANCE_PX = 100;
@@ -156,9 +156,9 @@ function CrossTrackLabelsRow({
                   key={`cluster-${idx}`}
                   data-testid={`cross-track-cluster-${idx}`}
                   onClick={() => setExpandedCluster(isExpanded ? null : cluster.clusterKey)}
-                  className={`absolute top-1/2 -translate-y-1/2 px-3 py-1.5 text-[10px] font-bold text-center transition-all cursor-pointer ${
-                    theme === 'fantasy' 
-                      ? 'font-fantasy-heading bg-fantasy-bg-card border-2 border-fantasy-crimson hover:bg-fantasy-crimson/10' 
+                  className={`absolute top-1/2 -translate-y-1/2 px-3 py-1.5 text-[12px] font-bold text-center transition-all cursor-pointer ${
+                    theme === 'fantasy'
+                      ? 'font-fantasy-heading bg-fantasy-bg-card border-2 border-fantasy-crimson hover:bg-fantasy-crimson/10'
                       : 'font-scifi-heading bg-scifi-bg-elevated border border-scifi-magenta hover:bg-scifi-magenta/20 hover:shadow-scifi-glow'
                   }`}
                   style={{ 
@@ -187,9 +187,9 @@ function CrossTrackLabelsRow({
                       setExpandedEvent(isEventExpanded ? null : evt.id);
                     }
                   }}
-                  className={`absolute top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold text-center transition-all cursor-pointer ${
-                    theme === 'fantasy' 
-                      ? 'font-fantasy-heading bg-fantasy-bg-card border-2 hover:border-fantasy-crimson' 
+                  className={`absolute top-1/2 -translate-y-1/2 px-2 py-1 text-[12px] font-bold text-center transition-all cursor-pointer ${
+                    theme === 'fantasy'
+                      ? 'font-fantasy-heading bg-fantasy-bg-card border-2 hover:border-fantasy-crimson'
                       : 'font-scifi-heading bg-scifi-bg-elevated border hover:border-scifi-magenta hover:shadow-scifi-glow'
                   } ${isEventExpanded ? 'ring-2' : ''}`}
                   style={{ 
@@ -892,16 +892,16 @@ function TrackLabel({ track, trackIndex, theme, onEdit }) {
       <div className="flex flex-col min-w-0 flex-1">
         <div className={`font-bold leading-snug ${
           theme === 'fantasy' 
-            ? 'font-fantasy-heading text-fantasy-text text-[13px]' 
-            : 'font-scifi-heading text-scifi-text uppercase tracking-wide text-[10px]'
+            ? 'font-fantasy-heading text-fantasy-text text-[14px]'
+            : 'font-scifi-heading text-scifi-text uppercase tracking-wide text-[12px]'
         }`}>
           {nameLines.map((line, idx) => (
             <div key={idx}>{line}</div>
           ))}
         </div>
-        <span className={`text-[10px] mt-0.5 ${
-          theme === 'fantasy' 
-            ? 'text-fantasy-muted italic font-fantasy-body' 
+        <span className={`text-[10px] font-medium mt-0.5 ${
+          theme === 'fantasy'
+            ? 'text-fantasy-text-light italic font-fantasy-heading'
             : 'text-scifi-text-dim font-scifi-mono'
         }`}>
           {track.calendarName}
@@ -1212,7 +1212,7 @@ function TrackRow({
           style={{ left: TRACK_CONTENT_START + m.x, top: AXIS_OFFSET - 20 }}
         >
           <div className={`h-5 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/30' : 'bg-scifi-border/25'}`} />
-          <span className={`text-[9px] mt-0.5 whitespace-nowrap select-none ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted/50'}`}>
+          <span className={`text-[11px] font-medium mt-0.5 whitespace-nowrap select-none ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
             {formatYear(m.localYear)} {track.abbr}
           </span>
         </div>
@@ -1374,10 +1374,10 @@ function TrackRow({
               }}
               className={`relative z-20 transition-all duration-200 ${
                 isUndated
-                  ? 'w-4 h-4 rounded-full hover:scale-125'
+                  ? 'w-5 h-5 rounded-full hover:scale-125'
                   : theme === 'fantasy'
-                    ? 'w-3 h-3 rounded-full border-2 hover:scale-150'
-                    : 'w-3 h-3 rotate-45 border hover:scale-150'
+                    ? 'w-4 h-4 rounded-full border-2 hover:scale-150'
+                    : 'w-4 h-4 rotate-45 border hover:scale-150'
               }`}
               style={{
                 backgroundColor: isUndated
@@ -1417,7 +1417,7 @@ function TrackRow({
                       <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   )}
-                  <div className={`text-[10px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
+                  <div className={`text-[13px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
                     {evt.titleLines.map((line, lineIndex) => (
                       <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
                     ))}
@@ -1427,7 +1427,7 @@ function TrackRow({
                       {evt.resolvedTags.slice(0, 3).map(tag => (
                         <span
                           key={`${evt.id}-visible-tag-${tag.id}`}
-                          className="px-2 py-0.5 text-[10px] font-bold max-w-full leading-none"
+                          className="px-2 py-0.5 text-[11px] font-bold max-w-full leading-none"
                           style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
                           title={tag.label}
                         >
@@ -1435,19 +1435,19 @@ function TrackRow({
                         </span>
                       ))}
                       {evt.resolvedTags.length > 3 && (
-                        <span className={`px-2 py-0.5 text-[10px] font-bold leading-none ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
+                        <span className={`px-2 py-0.5 text-[11px] font-bold leading-none ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
                           +{evt.resolvedTags.length - 3} more
                         </span>
                       )}
                     </div>
                   )}
-                  <div className={`text-[8px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                  <div className={`text-[11px] font-medium mt-0.5 ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
                     {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
                   </div>
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-1">
-                  <div className={`text-[12px] font-bold tracking-wide text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
+                  <div className={`text-[13px] font-bold tracking-wide text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
                     ...
                   </div>
                   {evt.resolvedTags.length > 0 && (
@@ -1461,7 +1461,7 @@ function TrackRow({
                         />
                       ))}
                       {evt.resolvedTags.length > 3 && (
-                        <span className={`text-[8px] font-bold ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                        <span className={`text-[10px] font-bold ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
                           +{evt.resolvedTags.length - 3}
                         </span>
                       )}
@@ -1524,7 +1524,7 @@ function StackClusterDetailsPanel({
                 e.stopPropagation();
                 setExpandedEvent(isExpanded ? null : evt.id);
               }}
-              className={`w-full rounded-md border px-3 py-2 text-left text-[10px] transition-colors ${theme === 'fantasy' ? 'font-fantasy-heading border-fantasy-border/60 hover:bg-fantasy-bg/60' : 'font-scifi-heading border-scifi-border/60 hover:bg-scifi-bg/70'}`}
+              className={`w-full rounded-md border px-3 py-2 text-left text-[12px] transition-colors ${theme === 'fantasy' ? 'font-fantasy-heading border-fantasy-border/60 hover:bg-fantasy-bg/60' : 'font-scifi-heading border-scifi-border/60 hover:bg-scifi-bg/70'}`}
               style={{
                 borderColor: isExpanded ? stackCluster.trackColor : undefined,
                 boxShadow: isExpanded ? `0 0 0 1px ${stackCluster.trackColor} inset` : 'none',
@@ -1537,7 +1537,7 @@ function StackClusterDetailsPanel({
                   {evt.resolvedTags.map(tag => (
                     <span
                       key={`${evt.id}-stack-panel-tag-${tag.id}`}
-                      className="px-2 py-0.5 text-[10px] font-bold leading-none"
+                      className="px-2 py-0.5 text-[11px] font-bold leading-none"
                       style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
                       title={tag.label}
                     >
@@ -1546,7 +1546,7 @@ function StackClusterDetailsPanel({
                   ))}
                 </div>
               )}
-              <div className={`mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+              <div className={`mt-1 font-medium ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
                 {formatYear(evt.year)} {stackCluster.trackAbbr}
               </div>
             </button>
