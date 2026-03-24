@@ -769,8 +769,8 @@ export default function TimelineView() {
           }
           if (!evt) return null;
           
-          // Drill-in handler for period events - always allow drilling in
-          const handleDrillIn = evt.type === 'period' ? () => {
+          // Drill-in handler for period events - only for track-specific periods, not cross-track
+          const handleDrillIn = (evt.type === 'period' && evt.trackId !== null) ? () => {
             // Push to navigation stack with just the ID (not the full object)
             setNavStack(prev => [...prev, { 
               periodEventId: evt.id, 

@@ -192,6 +192,13 @@ export function positionToLocalYear(x, track, masterRange, pixelsPerYear) {
 
 /**
  * Generate year markers for a track (in local years)
+ *
+ * Rules:
+ * - Use "nice" step sizes: 2, 5, 10, 20, 50, 100, 250, 500, 1000
+ * - Pick the largest step that still produces at least 3 interior ticks
+ *   (excluding start/end boundary ticks)
+ * - Always include year 0 (local) if it falls within the visible range
+ * - Start/end ticks are NOT included (this function only generates interior ticks)
  */
 export function generateTrackYearMarkers(track, masterRange, pixelsPerYear) {
   const trackMasterStart = localToMaster(track.startYear, track);
@@ -204,23 +211,64 @@ export function generateTrackYearMarkers(track, masterRange, pixelsPerYear) {
   const localVisibleEnd = masterToLocal(visibleEnd, track);
   const range = localVisibleEnd - localVisibleStart;
 
-  let step;
-  if (range * pixelsPerYear < 400) step = Math.max(1, Math.floor(range / 8));
-  else if (pixelsPerYear > 3) step = 50;
-  else if (pixelsPerYear > 1) step = 100;
-  else if (pixelsPerYear > 0.5) step = 200;
-  else step = 500;
+  if (range <= 0) return [];
 
+  const NICE_STEPS = [1, 2, 5, 10, 20, 50, 100, 250, 500, 1000];
+  const MIN_INTERIOR_TICKS = 3;
+
+  // Count how many interior ticks a given step would produce
+  const countInteriorTicks = (step) => {
+    const first = Math.ceil(localVisibleStart / step) * step;
+    // Skip ticks that land exactly on the visible boundaries
+    const adjustedFirst = first === localVisibleStart ? first + step : first;
+    let count = 0;
+    for (let y = adjustedFirst; y < localVisibleEnd; y += step) {
+      count++;
+    }
+    return count;
+  };
+
+  // Pick the largest nice step that produces at least MIN_INTERIOR_TICKS
+  let step = NICE_STEPS[0];
+  for (let i = NICE_STEPS.length - 1; i >= 0; i--) {
+    if (countInteriorTicks(NICE_STEPS[i]) >= MIN_INTERIOR_TICKS) {
+      step = NICE_STEPS[i];
+      break;
+    }
+  }
+
+  // Generate the ticks
   const markers = [];
-  const start = Math.ceil(localVisibleStart / step) * step;
+  const seenYears = new Set();
 
-  for (let localYear = start; localYear <= localVisibleEnd; localYear += step) {
+  // First, add year 0 if it falls inside the visible range (exclusive of boundaries)
+  if (localVisibleStart < 0 && localVisibleEnd > 0) {
+    const masterYear = localToMaster(0, track);
+    markers.push({
+      localYear: 0,
+      x: (masterYear - masterRange.start) * pixelsPerYear,
+    });
+    seenYears.add(0);
+  }
+
+  // Then add regular step-based ticks
+  const firstTick = Math.ceil(localVisibleStart / step) * step;
+  for (let localYear = firstTick; localYear <= localVisibleEnd; localYear += step) {
+    // Skip boundary ticks (exact start/end of visible range)
+    if (localYear === localVisibleStart || localYear === localVisibleEnd) continue;
+    // Skip if already added (e.g., year 0)
+    if (seenYears.has(localYear)) continue;
+
     const masterYear = localToMaster(localYear, track);
     markers.push({
       localYear,
-      x: (masterYear - masterRange.start) * pixelsPerYear
+      x: (masterYear - masterRange.start) * pixelsPerYear,
     });
+    seenYears.add(localYear);
   }
+
+  // Sort by local year for consistent rendering
+  markers.sort((a, b) => a.localYear - b.localYear);
 
   return markers;
 }
