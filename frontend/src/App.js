@@ -40,11 +40,7 @@ function ToolsMenu() {
   };
 
   return (
-    <div ref={menuRef} className={`fixed bottom-6 right-6 z-50 mt-14 ${
-      theme === 'fantasy' 
-        ? 'bg-fantasy-bg-dark/90 border-2 border-fantasy-border shadow-fantasy-lg rounded p-2' 
-        : 'bg-scifi-bg-surface/95 border border-scifi-cyan-dim/50 shadow-scifi rounded p-2'
-    }`} style={{ marginTop: '180px' }}>
+    <div ref={menuRef} className="fixed bottom-6 right-24 z-50">
       <button
         data-testid="tools-menu-btn"
         data-interactive="true"

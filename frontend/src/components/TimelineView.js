@@ -622,7 +622,6 @@ export default function TimelineView() {
       <div className="flex-1 flex overflow-hidden relative" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
         {/* Fixed left sidebar with track names - no scroll, synced via JS */}
         <div 
-          ref={sidebarRef}
           className={`flex-shrink-0 w-52 overflow-hidden relative z-10 ${
             theme === 'fantasy' 
               ? 'bg-gradient-to-r from-fantasy-bg-dark/95 to-fantasy-bg-dark/80 border-r-2 border-fantasy-border/60 shadow-lg' 
@@ -630,11 +629,15 @@ export default function TimelineView() {
           }`}
           style={{ paddingTop: 20 }}
         >
-          <div className="relative" style={{ 
-            minHeight: currentPeriod 
-              ? TRACK_HEIGHT + 100
-              : allTracks.length * TRACK_HEIGHT + 100 
-          }}>
+          <div 
+            ref={sidebarRef}
+            className="relative transition-transform" 
+            style={{ 
+              minHeight: currentPeriod 
+                ? TRACK_HEIGHT + 100
+                : allTracks.length * TRACK_HEIGHT + 100 
+            }}
+          >
             {currentPeriod ? (
               <TrackLabel
                 track={drilledDisplayTrack || (currentPeriod.parentTrackId
