@@ -2,10 +2,8 @@ import React from 'react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { TimelineProvider, useTimeline } from './contexts/TimelineContext';
 import { useTheme } from './contexts/ThemeContext';
-import ThemeSwitcher from './components/ThemeSwitcher';
 import TimelinePicker from './components/TimelinePicker';
 import ZoomControls from './components/ZoomControls';
-import JsonDownloadButton from './components/JsonDownloadButton';
 import TimelineView from './components/TimelineView';
 import { Loader2 } from 'lucide-react';
 
@@ -39,10 +37,8 @@ function AppContent() {
 
   return (
     <>
-      <ThemeSwitcher />
       <TimelinePicker />
       <ZoomControls />
-      <JsonDownloadButton />
       <TimelineView />
     </>
   );

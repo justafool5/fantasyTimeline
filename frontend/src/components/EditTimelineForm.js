@@ -34,10 +34,10 @@ export default function EditTimelineForm({ onClose, onEditTags }) {
   const hasLocalData = localEvents.length > 0 || localTracks.length > 0;
 
   const inputClass = theme === 'fantasy'
-    ? 'bg-fantasy-bg border border-fantasy-border/60 text-fantasy-text font-fantasy-body px-3 py-2 w-full focus:outline-none focus:border-fantasy-accent'
-    : 'bg-scifi-bg border border-scifi-border text-scifi-text font-scifi-body px-3 py-2 w-full focus:outline-none focus:border-scifi-accent';
+    ? 'bg-fantasy-bg-card border-2 border-fantasy-border text-fantasy-text font-fantasy-body px-3 py-2.5 w-full focus:outline-none focus:border-fantasy-gold transition-colors'
+    : 'bg-scifi-bg border border-scifi-cyan-dim text-scifi-text font-scifi-body px-3 py-2.5 w-full focus:outline-none focus:border-scifi-cyan focus:shadow-scifi-glow transition-all';
 
-  const labelClass = `block mb-1 text-xs font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-muted font-scifi-heading'}`;
+  const labelClass = `block mb-1.5 text-xs font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-cyan-dim font-scifi-heading'}`;
 
   return (
     <motion.div
@@ -46,7 +46,7 @@ export default function EditTimelineForm({ onClose, onEditTags }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(10,8,4,0.7)' : 'rgba(0,0,0,0.8)' }}
+      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(42, 24, 16, 0.85)' : 'rgba(3, 3, 8, 0.9)' }}
       onClick={onClose}
     >
       <motion.form
@@ -59,20 +59,20 @@ export default function EditTimelineForm({ onClose, onEditTags }) {
         className={`
           w-full max-w-md max-h-[85vh] overflow-y-auto p-6
           ${theme === 'fantasy'
-            ? 'bg-fantasy-card border border-fantasy-border shadow-[0_4px_40px_rgba(0,0,0,0.7)]'
-            : 'bg-scifi-bg-secondary border border-scifi-border shadow-[0_0_30px_rgba(0,243,255,0.1)] backdrop-blur-md'
+            ? 'bg-gradient-to-b from-fantasy-bg-card to-fantasy-bg-dark border-2 border-fantasy-border shadow-fantasy-lg'
+            : 'bg-gradient-to-b from-scifi-bg-elevated to-scifi-bg-surface border border-scifi-cyan-dim shadow-scifi-lg'
           }
         `}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className={`text-xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-base'}`}>
+          <h3 className={`text-xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-cyan uppercase tracking-wider text-base'}`}>
             Edit Timeline
           </h3>
           <button 
             type="button" 
             onClick={onClose} 
             data-testid="close-edit-timeline" 
-            className={`p-1 ${theme === 'fantasy' ? 'text-fantasy-muted hover:text-fantasy-text' : 'text-scifi-muted hover:text-scifi-accent'}`}
+            className={`p-1.5 transition-colors ${theme === 'fantasy' ? 'text-fantasy-muted hover:text-fantasy-gold' : 'text-scifi-text-dim hover:text-scifi-cyan'}`}
           >
             <X size={18} />
           </button>

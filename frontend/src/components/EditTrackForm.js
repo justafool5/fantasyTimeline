@@ -46,10 +46,10 @@ export default function EditTrackForm({ track, onClose }) {
   };
 
   const inputClass = theme === 'fantasy'
-    ? 'bg-fantasy-bg border border-fantasy-border/60 text-fantasy-text font-fantasy-body px-3 py-2 w-full focus:outline-none focus:border-fantasy-accent'
-    : 'bg-scifi-bg border border-scifi-border text-scifi-text font-scifi-body px-3 py-2 w-full focus:outline-none focus:border-scifi-accent';
+    ? 'bg-fantasy-bg-card border-2 border-fantasy-border text-fantasy-text font-fantasy-body px-3 py-2.5 w-full focus:outline-none focus:border-fantasy-gold transition-colors'
+    : 'bg-scifi-bg border border-scifi-cyan-dim text-scifi-text font-scifi-body px-3 py-2.5 w-full focus:outline-none focus:border-scifi-cyan focus:shadow-scifi-glow transition-all';
 
-  const labelClass = `block mb-1 text-xs font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-muted font-scifi-heading'}`;
+  const labelClass = `block mb-1.5 text-xs font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-cyan-dim font-scifi-heading'}`;
 
   return (
     <motion.div
@@ -58,7 +58,7 @@ export default function EditTrackForm({ track, onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(10,8,4,0.7)' : 'rgba(0,0,0,0.8)' }}
+      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(42, 24, 16, 0.85)' : 'rgba(3, 3, 8, 0.9)' }}
       onClick={onClose}
     >
       <motion.form
@@ -71,32 +71,36 @@ export default function EditTrackForm({ track, onClose }) {
         className={`
           w-full max-w-md max-h-[85vh] overflow-y-auto p-6
           ${theme === 'fantasy'
-            ? 'bg-fantasy-card border border-fantasy-border shadow-[0_4px_40px_rgba(0,0,0,0.7)]'
-            : 'bg-scifi-bg-secondary border border-scifi-border shadow-[0_0_30px_rgba(0,243,255,0.1)] backdrop-blur-md'
+            ? 'bg-gradient-to-b from-fantasy-bg-card to-fantasy-bg-dark border-2 border-fantasy-border shadow-fantasy-lg'
+            : 'bg-gradient-to-b from-scifi-bg-elevated to-scifi-bg-surface border border-scifi-cyan-dim shadow-scifi-lg'
           }
         `}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className={`text-xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-base'}`}>
+          <h3 className={`text-xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-cyan uppercase tracking-wider text-base'}`}>
             Edit Track
           </h3>
-          <button type="button" onClick={onClose} data-testid="close-edit-track" className={`p-1 ${theme === 'fantasy' ? 'text-fantasy-muted hover:text-fantasy-text' : 'text-scifi-muted hover:text-scifi-accent'}`}>
+          <button type="button" onClick={onClose} data-testid="close-edit-track" className={`p-1.5 transition-colors ${theme === 'fantasy' ? 'text-fantasy-muted hover:text-fantasy-gold' : 'text-scifi-text-dim hover:text-scifi-cyan'}`}>
             <X size={18} />
           </button>
         </div>
 
         {/* Name */}
         <div className="mb-4">
-          <label className={labelClass}>Name *</label>
+          <label className={labelClass}>Name * <span className="font-normal opacity-60">(max 75 chars)</span></label>
           <input
             data-testid="edit-track-name-input"
             type="text"
             value={form.name}
-            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value.slice(0, 75) }))}
             className={inputClass}
             placeholder="e.g., Dwarven Kingdoms"
+            maxLength={75}
             required
           />
+          <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-text-dim'}`}>
+            {form.name.length}/75 characters
+          </p>
         </div>
 
         {/* Calendar Name */}
@@ -231,8 +235,8 @@ export default function EditTrackForm({ track, onClose }) {
             type="submit"
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-bold text-sm transition-all
               ${theme === 'fantasy'
-                ? 'bg-fantasy-accent text-fantasy-bg border border-fantasy-accent font-fantasy-heading hover:bg-yellow-600'
-                : 'bg-scifi-accent text-scifi-bg border border-scifi-accent font-scifi-heading hover:bg-cyan-300'
+                ? 'bg-fantasy-gold text-fantasy-bg-dark border-2 border-fantasy-gold font-fantasy-heading hover:bg-fantasy-accent-light shadow-fantasy-glow'
+                : 'bg-scifi-cyan/20 text-scifi-cyan border border-scifi-cyan font-scifi-heading uppercase tracking-wider hover:bg-scifi-cyan/30 hover:shadow-scifi-glow'
               }`}
           >
             <Save size={16} />
@@ -242,7 +246,7 @@ export default function EditTrackForm({ track, onClose }) {
 
         {/* Delete Confirmation */}
         {showDeleteConfirm && (
-          <div className={`mt-4 p-4 ${theme === 'fantasy' ? 'bg-red-900/20 border border-red-900/40' : 'bg-red-900/20 border border-red-900/40'}`}>
+          <div className={`mt-4 p-4 ${theme === 'fantasy' ? 'bg-fantasy-crimson/20 border-2 border-fantasy-crimson/40' : 'bg-scifi-magenta/10 border border-scifi-magenta/40'}`}>
             <p className={`text-sm mb-3 ${theme === 'fantasy' ? 'text-fantasy-text' : 'text-scifi-text'}`}>
               Delete this track and all its events? This cannot be undone.
             </p>
@@ -250,7 +254,7 @@ export default function EditTrackForm({ track, onClose }) {
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className={`flex-1 px-3 py-2 text-sm font-bold ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border' : 'bg-scifi-bg text-scifi-muted border border-scifi-border'}`}
+                className={`flex-1 px-3 py-2 text-sm font-bold transition-colors ${theme === 'fantasy' ? 'bg-fantasy-bg-card text-fantasy-muted border-2 border-fantasy-border hover:border-fantasy-gold' : 'bg-scifi-bg text-scifi-text-dim border border-scifi-cyan-dim hover:border-scifi-cyan'}`}
               >
                 Cancel
               </button>
@@ -258,7 +262,7 @@ export default function EditTrackForm({ track, onClose }) {
                 data-testid="confirm-delete-track-btn"
                 type="button"
                 onClick={handleDelete}
-                className="flex-1 px-3 py-2 text-sm font-bold bg-red-700 text-white border border-red-600 hover:bg-red-600"
+                className={`flex-1 px-3 py-2 text-sm font-bold transition-colors ${theme === 'fantasy' ? 'bg-fantasy-crimson text-white border-2 border-fantasy-crimson hover:bg-fantasy-crimson/80' : 'bg-scifi-magenta/30 text-scifi-magenta border border-scifi-magenta hover:bg-scifi-magenta/40'}`}
               >
                 Delete Track
               </button>

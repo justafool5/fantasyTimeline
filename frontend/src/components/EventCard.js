@@ -143,10 +143,10 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
   const resolvedTags = useMemo(() => getResolvedEventTags(event.tags || [], timelineMeta?.tagDefinitions || [], theme), [event.tags, timelineMeta?.tagDefinitions, theme]);
 
   const inputClass = theme === 'fantasy'
-    ? 'bg-fantasy-bg border border-fantasy-border/60 text-fantasy-text font-fantasy-body px-2 py-1.5 w-full text-sm focus:outline-none focus:border-fantasy-accent'
-    : 'bg-scifi-bg border border-scifi-border text-scifi-text font-scifi-body px-2 py-1.5 w-full text-sm focus:outline-none focus:border-scifi-accent';
+    ? 'bg-fantasy-bg-card border-2 border-fantasy-border text-fantasy-text font-fantasy-body px-3 py-2 w-full text-sm focus:outline-none focus:border-fantasy-gold'
+    : 'bg-scifi-bg border border-scifi-cyan-dim text-scifi-text font-scifi-body px-3 py-2 w-full text-sm focus:outline-none focus:border-scifi-cyan focus:shadow-scifi-glow';
 
-  const labelClass = `block mb-0.5 text-[10px] font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-muted font-scifi-heading'}`;
+  const labelClass = `block mb-1 text-[10px] font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-cyan-dim font-scifi-heading'}`;
 
   return (
     <motion.div
@@ -155,7 +155,7 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(10,8,4,0.6)' : 'rgba(0,0,0,0.7)' }}
+      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(42, 24, 16, 0.85)' : 'rgba(3, 3, 8, 0.9)' }}
       onClick={onClose}
     >
       <motion.div
@@ -168,15 +168,15 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
         className={`
           w-full max-w-md max-h-[80vh] overflow-y-auto relative
           ${theme === 'fantasy'
-            ? 'bg-[#1e160d] border border-fantasy-border text-fantasy-text shadow-[0_4px_40px_rgba(0,0,0,0.8)]'
-            : 'bg-slate-900/95 border border-cyan-500/50 text-cyan-50 shadow-[0_0_30px_rgba(0,243,255,0.15)] backdrop-blur-md'
+            ? 'bg-gradient-to-b from-fantasy-bg-card to-fantasy-bg-dark border-2 border-fantasy-border text-fantasy-text shadow-fantasy-lg'
+            : 'bg-gradient-to-b from-scifi-bg-elevated to-scifi-bg-surface border border-scifi-cyan-dim text-scifi-text shadow-scifi-lg'
           }
         `}
       >
         {theme === 'scifi' && <div className="scanlines absolute inset-0 pointer-events-none" />}
 
         {/* Header */}
-        <div className={`flex items-start justify-between p-5 pb-3 relative z-10 ${theme === 'fantasy' ? 'border-b border-fantasy-border/40' : 'border-b border-cyan-500/20'}`}>
+        <div className={`flex items-start justify-between p-5 pb-3 relative z-10 ${theme === 'fantasy' ? 'border-b-2 border-fantasy-border/60' : 'border-b border-scifi-cyan-dim/40'}`}>
           <div className="flex-1 pr-3">
             {editing ? (
               <input
@@ -188,7 +188,7 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
                 maxLength={EVENT_TITLE_MAX_LENGTH}
               />
             ) : (
-              <h3 className={`text-xl font-bold leading-tight ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-base text-scifi-accent'}`}>
+              <h3 className={`text-xl font-bold leading-tight ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-cyan uppercase tracking-wider text-base'}`}>
                 {event.title}
               </h3>
             )}

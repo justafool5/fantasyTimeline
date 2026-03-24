@@ -19,7 +19,7 @@ import AddTrackForm from './AddTrackForm';
 import EditTrackForm from './EditTrackForm';
 import EditTimelineForm from './EditTimelineForm';
 import EditTagDefinitionsForm from './EditTagDefinitionsForm';
-import { Plus, ArrowLeft, Settings, Pencil, X } from 'lucide-react';
+import { Plus, ArrowLeft, Settings, Pencil, X, Globe } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
@@ -36,6 +36,197 @@ const STACK_DETAILS_WIDTH = 320;
 const MIN_LABEL_WIDTH = 80;
 const TARGET_LABEL_LINE_LENGTH = 22;
 const ESTIMATED_CHAR_WIDTH = 6.5;
+const CROSS_TRACK_LABELS_HEIGHT = 50;
+const TRACK_NAME_MAX_LENGTH = 75;
+const CROSS_TRACK_CLUSTER_DISTANCE_PX = 100;
+
+// Cross-track events dedicated label row (fixed between header and timeline)
+function CrossTrackLabelsRow({ 
+  events, 
+  masterRange, 
+  pixelsPerYear, 
+  totalWidth, 
+  expandedEvent, 
+  setExpandedEvent, 
+  theme,
+  scrollRef
+}) {
+  const rowRef = useRef(null);
+  const crossTrackColor = theme === 'fantasy' ? '#8a0303' : '#ff00ff';
+  const [expandedCluster, setExpandedCluster] = useState(null);
+  
+  // Sync scroll with main timeline
+  useEffect(() => {
+    const handleScroll = () => {
+      if (rowRef.current && scrollRef.current) {
+        rowRef.current.scrollLeft = scrollRef.current.scrollLeft;
+      }
+    };
+    const mainScroll = scrollRef.current;
+    if (mainScroll) {
+      mainScroll.addEventListener('scroll', handleScroll);
+    }
+    return () => {
+      if (mainScroll) {
+        mainScroll.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [scrollRef]);
+
+  // Compute positions and cluster events
+  const clusteredLabels = useMemo(() => {
+    if (!events.length) return [];
+    
+    // Calculate x positions for all events
+    const positionedEvents = events.map(evt => {
+      const isPeriod = evt.type === 'period';
+      const masterYear = isPeriod ? evt.masterStartDate.year : evt.masterDate.year;
+      const x = TRACK_CONTENT_START + (masterYear - masterRange.start) * pixelsPerYear;
+      return { ...evt, x };
+    }).sort((a, b) => a.x - b.x);
+
+    // Cluster events that are too close together
+    const clusters = [];
+    let currentCluster = [positionedEvents[0]];
+
+    for (let i = 1; i < positionedEvents.length; i++) {
+      const evt = positionedEvents[i];
+      const prevEvt = currentCluster[currentCluster.length - 1];
+      
+      if (evt.x - prevEvt.x < CROSS_TRACK_CLUSTER_DISTANCE_PX) {
+        currentCluster.push(evt);
+      } else {
+        clusters.push(currentCluster);
+        currentCluster = [evt];
+      }
+    }
+    clusters.push(currentCluster);
+
+    return clusters.map(cluster => {
+      const centerX = cluster.reduce((sum, evt) => sum + evt.x, 0) / cluster.length;
+      return {
+        events: cluster,
+        centerX,
+        isClustered: cluster.length > 1,
+        clusterKey: cluster.map(e => e.id).join('::'),
+      };
+    });
+  }, [events, masterRange, pixelsPerYear]);
+
+  return (
+    <div className={`flex-shrink-0 flex border-b ${
+      theme === 'fantasy'
+        ? 'bg-fantasy-bg-dark/60 border-fantasy-border/40'
+        : 'bg-scifi-bg-surface/60 border-scifi-cyan-dim/30'
+    }`} style={{ height: CROSS_TRACK_LABELS_HEIGHT }}>
+      {/* Fixed sidebar space */}
+      <div className={`flex-shrink-0 w-52 flex items-center px-4 border-r ${
+        theme === 'fantasy'
+          ? 'bg-fantasy-bg-dark/80 border-fantasy-border/40'
+          : 'bg-scifi-bg-elevated/80 border-scifi-cyan-dim/30'
+      }`}>
+        <div className="flex items-center gap-2">
+          <Globe size={14} className={theme === 'fantasy' ? 'text-fantasy-crimson' : 'text-scifi-magenta'} />
+          <span className={`text-xs font-bold ${
+            theme === 'fantasy'
+              ? 'font-fantasy-heading text-fantasy-muted'
+              : 'font-scifi-heading text-scifi-text-dim uppercase tracking-wider'
+          }`}>
+            Cross-Track
+          </span>
+        </div>
+      </div>
+      
+      {/* Scrollable labels area */}
+      <div 
+        ref={rowRef}
+        className="flex-1 overflow-x-hidden relative"
+      >
+        <div 
+          className="relative h-full"
+          style={{ width: totalWidth + TRACK_CONTENT_START + TIMELINE_PADDING }}
+        >
+          {clusteredLabels.map((cluster, idx) => {
+            const isExpanded = expandedCluster === cluster.clusterKey;
+            
+            if (cluster.isClustered && !isExpanded) {
+              // Render cluster bubble
+              return (
+                <button
+                  key={`cluster-${idx}`}
+                  data-testid={`cross-track-cluster-${idx}`}
+                  onClick={() => setExpandedCluster(isExpanded ? null : cluster.clusterKey)}
+                  className={`absolute top-1/2 -translate-y-1/2 px-3 py-1.5 text-[10px] font-bold text-center transition-all cursor-pointer ${
+                    theme === 'fantasy' 
+                      ? 'font-fantasy-heading bg-fantasy-bg-card border-2 border-fantasy-crimson hover:bg-fantasy-crimson/10' 
+                      : 'font-scifi-heading bg-scifi-bg-elevated border border-scifi-magenta hover:bg-scifi-magenta/20 hover:shadow-scifi-glow'
+                  }`}
+                  style={{ 
+                    left: cluster.centerX, 
+                    transform: 'translate(-50%, -50%)',
+                    color: crossTrackColor,
+                  }}
+                >
+                  {cluster.events.length} events
+                </button>
+              );
+            }
+            
+            // Render individual labels (or expanded cluster)
+            return cluster.events.map((evt, evtIdx) => {
+              const isEventExpanded = expandedEvent === evt.id;
+              
+              return (
+                <button
+                  key={evt.id}
+                  data-testid={`cross-track-label-${evt.id}`}
+                  onClick={() => {
+                    if (cluster.isClustered && isExpanded) {
+                      setExpandedEvent(isEventExpanded ? null : evt.id);
+                    } else {
+                      setExpandedEvent(isEventExpanded ? null : evt.id);
+                    }
+                  }}
+                  className={`absolute top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold text-center transition-all cursor-pointer ${
+                    theme === 'fantasy' 
+                      ? 'font-fantasy-heading bg-fantasy-bg-card border-2 hover:border-fantasy-crimson' 
+                      : 'font-scifi-heading bg-scifi-bg-elevated border hover:border-scifi-magenta hover:shadow-scifi-glow'
+                  } ${isEventExpanded ? 'ring-2' : ''}`}
+                  style={{ 
+                    left: cluster.isClustered ? cluster.centerX + (evtIdx - (cluster.events.length - 1) / 2) * 80 : evt.x, 
+                    transform: 'translate(-50%, -50%)',
+                    color: crossTrackColor,
+                    borderColor: isEventExpanded ? crossTrackColor : (theme === 'fantasy' ? '#8b7355' : '#007a8a'),
+                    ringColor: crossTrackColor,
+                    maxWidth: 140,
+                    zIndex: cluster.isClustered ? 10 : 1,
+                  }}
+                >
+                  <span className="line-clamp-1">{evt.title}</span>
+                </button>
+              );
+            });
+          })}
+          
+          {/* Collapse button when cluster is expanded */}
+          {expandedCluster && (
+            <button
+              onClick={() => setExpandedCluster(null)}
+              className={`absolute top-1 right-4 px-2 py-0.5 text-[9px] font-bold transition-all ${
+                theme === 'fantasy'
+                  ? 'bg-fantasy-border text-fantasy-bg-card hover:bg-fantasy-gold'
+                  : 'bg-scifi-cyan-dim text-scifi-bg hover:bg-scifi-cyan'
+              }`}
+              style={{ zIndex: 20 }}
+            >
+              Collapse
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function splitTitleLines(title) {
   const normalized = (title || '').trim();
@@ -88,6 +279,7 @@ export default function TimelineView() {
     expandedEvent,
     setExpandedEvent,
     scrollRef,
+    downloadFullTimelineJSON,
   } = useTimeline();
   const { theme } = useTheme();
 
@@ -103,6 +295,42 @@ export default function TimelineView() {
   const scrollTimeoutRef = useRef(null);
   const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
   const timelineAreaRef = useRef(null);
+  const sidebarRef = useRef(null);
+  
+  // Sync vertical scrolling: timeline scrolls, sidebar follows via transform
+  useEffect(() => {
+    const handleTimelineScroll = () => {
+      if (scrollRef.current && sidebarRef.current) {
+        const scrollTop = scrollRef.current.scrollTop;
+        sidebarRef.current.style.transform = `translateY(-${scrollTop}px)`;
+      }
+    };
+    
+    const timeline = scrollRef.current;
+    if (timeline) {
+      timeline.addEventListener('scroll', handleTimelineScroll);
+    }
+    
+    return () => {
+      if (timeline) {
+        timeline.removeEventListener('scroll', handleTimelineScroll);
+      }
+    };
+  }, [scrollRef]);
+
+  // Listen for custom events from ToolsMenu in App.js
+  useEffect(() => {
+    const handleAddTrack = () => setShowAddTrack(true);
+    const handleEditTimeline = () => setShowEditTimeline(true);
+    
+    window.addEventListener('timeline:addTrack', handleAddTrack);
+    window.addEventListener('timeline:editTimeline', handleEditTimeline);
+    
+    return () => {
+      window.removeEventListener('timeline:addTrack', handleAddTrack);
+      window.removeEventListener('timeline:editTimeline', handleEditTimeline);
+    };
+  }, []);
   
   // Navigation stack for drilling into periods
   const [navStack, setNavStack] = useState([]); // [{ periodEventId, parentTrackId }]
@@ -294,29 +522,53 @@ export default function TimelineView() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className={`text-center py-4 px-6 flex-shrink-0 ${theme === 'fantasy' ? 'border-b border-fantasy-border/40 bg-fantasy-card/60' : 'border-b border-scifi-border/40 bg-scifi-bg-secondary/50'}`}>
-        <div className="flex items-center justify-center gap-4">
+    <div className="flex flex-col h-full overflow-hidden relative z-10">
+      {/* Header - simplified with only title and description */}
+      <div className={`text-center py-4 px-6 flex-shrink-0 relative ${
+        theme === 'fantasy' 
+          ? 'bg-gradient-to-b from-fantasy-bg-dark/90 to-fantasy-bg/80 border-b-2 border-fantasy-border shadow-fantasy' 
+          : 'bg-gradient-to-b from-scifi-bg-elevated/95 to-scifi-bg-surface/90 border-b border-scifi-cyan-dim/50 shadow-scifi'
+      }`}>
+        {/* Sci-fi scan line effect */}
+        {theme === 'scifi' && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+            <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-scifi-cyan to-transparent" 
+                 style={{ animation: 'scifiScan 3s linear infinite' }} />
+          </div>
+        )}
+        
+        <div className="flex items-center justify-center gap-5 relative">
           {/* Back button when drilled into a period */}
           {currentPeriod && (
             <button
               data-testid="back-btn"
               data-interactive="true"
               onClick={() => setNavStack(prev => prev.slice(0, -1))}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border hover:text-fantasy-accent hover:border-fantasy-accent/50 font-fantasy-heading' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:text-scifi-accent hover:border-scifi-accent/50 font-scifi-heading'}`}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold transition-all ${
+                theme === 'fantasy' 
+                  ? 'bg-fantasy-bg-card text-fantasy-text-light border-2 border-fantasy-border hover:border-fantasy-gold hover:text-fantasy-gold font-fantasy-heading shadow-fantasy' 
+                  : 'bg-scifi-bg-surface text-scifi-text-dim border border-scifi-cyan-dim hover:border-scifi-cyan hover:text-scifi-cyan font-scifi-heading uppercase tracking-wider'
+              }`}
             >
               <ArrowLeft size={14} /> Back
             </button>
           )}
           
           <div className="flex flex-col items-center">
-            <h1 data-testid="timeline-title" className={`text-2xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-lg tracking-widest'}`}>
+            <h1 data-testid="timeline-title" className={`text-3xl font-bold ${
+              theme === 'fantasy' 
+                ? 'font-fantasy-heading text-fantasy-text tracking-wide' 
+                : 'font-scifi-heading text-scifi-cyan text-xl tracking-[0.2em] uppercase'
+            }`}>
               {currentPeriod ? currentPeriod.periodEvent.title : timelineMeta.title}
             </h1>
             {/* Description - only show on main timeline, not when drilled in */}
             {!currentPeriod && timelineMeta.description && (
-              <p data-testid="timeline-description" className={`text-sm mt-1 max-w-xl ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-body' : 'text-scifi-muted font-scifi-body'}`}>
+              <p data-testid="timeline-description" className={`text-sm mt-1 max-w-2xl leading-relaxed ${
+                theme === 'fantasy' 
+                  ? 'text-fantasy-text-light font-fantasy-body italic' 
+                  : 'text-scifi-text-dim font-scifi-body tracking-wide'
+              }`}>
                 {timelineMeta.description}
               </p>
             )}
@@ -327,72 +579,86 @@ export default function TimelineView() {
             const pe = currentPeriod.periodEvent;
             const track = allTracks.find(t => t.id === pe.trackId);
             if (pe.trackId === null) {
-              // Cross-track period
               return (
-                <span className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                  (Reference: {pe.masterStartDate.year} — {pe.masterEndDate.year})
+                <span className={`text-sm px-3 py-1 rounded ${
+                  theme === 'fantasy' 
+                    ? 'text-fantasy-muted bg-fantasy-bg-dark/50 border border-fantasy-border/50' 
+                    : 'text-scifi-text-dim bg-scifi-bg/50 border border-scifi-cyan-dim/30'
+                }`}>
+                  Reference: {pe.masterStartDate.year} — {pe.masterEndDate.year}
                 </span>
               );
             } else if (track) {
               return (
-                <span className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                  ({pe.startDate.year} — {pe.endDate.year} {track.abbr})
+                <span className={`text-sm px-3 py-1 rounded ${
+                  theme === 'fantasy' 
+                    ? 'text-fantasy-muted bg-fantasy-bg-dark/50 border border-fantasy-border/50' 
+                    : 'text-scifi-text-dim bg-scifi-bg/50 border border-scifi-cyan-dim/30'
+                }`}>
+                  {pe.startDate.year} — {pe.endDate.year} {track.abbr}
                 </span>
               );
             }
             return null;
           })()}
-          
-          {!currentPeriod && (
-            <>
-              <button
-                data-testid="edit-timeline-btn"
-                data-interactive="true"
-                onClick={() => setShowEditTimeline(true)}
-                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border hover:text-fantasy-accent hover:border-fantasy-accent/50 font-fantasy-heading' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:text-scifi-accent hover:border-scifi-accent/50 font-scifi-heading'}`}
-              >
-                <Settings size={14} />
-              </button>
-              <button
-                data-testid="add-track-btn"
-                data-interactive="true"
-                onClick={() => setShowAddTrack(true)}
-                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/20 text-fantasy-accent border border-fantasy-accent/40 hover:bg-fantasy-accent/30 font-fantasy-heading' : 'bg-scifi-accent/20 text-scifi-accent border border-scifi-accent/40 hover:bg-scifi-accent/30 font-scifi-heading'}`}
-              >
-                <Plus size={14} /> Add Track
-              </button>
-            </>
-          )}
         </div>
       </div>
 
+      {/* Cross-track events dedicated label row - always visible */}
+      {!currentPeriod && displayCrossTrackEvents.length > 0 && (
+        <CrossTrackLabelsRow
+          events={displayCrossTrackEvents}
+          masterRange={effectiveMasterRange}
+          pixelsPerYear={pixelsPerYear}
+          totalWidth={totalWidth}
+          expandedEvent={expandedEvent}
+          setExpandedEvent={setExpandedEvent}
+          theme={theme}
+          scrollRef={scrollRef}
+        />
+      )}
+
       {/* Main content area with fixed sidebar and scrollable timeline */}
-      <div className="flex-1 flex overflow-hidden" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
-        {/* Fixed left sidebar with track names */}
+      <div className="flex-1 flex overflow-hidden relative" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
+        {/* Fixed left sidebar with track names - no scroll, synced via JS */}
         <div 
-          className={`flex-shrink-0 w-48 overflow-y-auto ${theme === 'fantasy' ? 'bg-fantasy-card/80 border-r border-fantasy-border/30' : 'bg-scifi-bg-secondary/80 border-r border-scifi-border/30'}`}
+          className={`flex-shrink-0 w-52 overflow-hidden relative z-10 ${
+            theme === 'fantasy' 
+              ? 'bg-gradient-to-r from-fantasy-bg-dark/95 to-fantasy-bg-dark/80 border-r-2 border-fantasy-border/60 shadow-lg' 
+              : 'bg-gradient-to-r from-scifi-bg-elevated/98 to-scifi-bg-surface/95 border-r border-scifi-cyan-dim/40'
+          }`}
           style={{ paddingTop: 20 }}
         >
-          {currentPeriod ? (
-            <TrackLabel
-              track={drilledDisplayTrack || (currentPeriod.parentTrackId
-                ? allTracks.find(t => t.id === currentPeriod.parentTrackId)
-                : allTracks[0])}
-              trackIndex={0}
-              theme={theme}
-              onEdit={setEditingTrack}
-            />
-          ) : (
-            allTracks.map((track, trackIndex) => (
+          <div 
+            ref={sidebarRef}
+            className="relative transition-transform" 
+            style={{ 
+              minHeight: currentPeriod 
+                ? TRACK_HEIGHT + 100
+                : allTracks.length * TRACK_HEIGHT + 100 
+            }}
+          >
+            {currentPeriod ? (
               <TrackLabel
-                key={track.id}
-                track={track}
-                trackIndex={trackIndex}
+                track={drilledDisplayTrack || (currentPeriod.parentTrackId
+                  ? allTracks.find(t => t.id === currentPeriod.parentTrackId)
+                  : allTracks[0])}
+                trackIndex={0}
                 theme={theme}
                 onEdit={setEditingTrack}
               />
-            ))
-          )}
+            ) : (
+              allTracks.map((track, trackIndex) => (
+                <TrackLabel
+                  key={track.id}
+                  track={track}
+                  trackIndex={trackIndex}
+                  theme={theme}
+                  onEdit={setEditingTrack}
+                />
+              ))
+            )}
+          </div>
         </div>
 
         {selectedStackCluster && (
@@ -576,29 +842,76 @@ export default function TimelineView() {
 
 // Track label component for the fixed sidebar
 function TrackLabel({ track, trackIndex, theme, onEdit }) {
+  // Split long track names into multiple lines (word-wrap aware)
+  const nameLines = useMemo(() => {
+    const name = track.name || '';
+    if (name.length <= 18) return [name];
+    
+    // Try to split at word boundaries
+    const words = name.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    for (const word of words) {
+      if (currentLine.length + word.length + 1 <= 18) {
+        currentLine = currentLine ? `${currentLine} ${word}` : word;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    
+    // Limit to 3 lines max, add ellipsis if needed
+    if (lines.length > 3) {
+      lines[2] = lines[2] + '...';
+      return lines.slice(0, 3);
+    }
+    return lines;
+  }, [track.name]);
+
   return (
     <div
       data-testid={`track-label-${track.id}`}
-      className={`flex items-center gap-2 px-3 py-2 group cursor-pointer transition-all ${theme === 'fantasy' ? 'hover:bg-fantasy-bg-secondary/50' : 'hover:bg-scifi-accent/5'}`}
-      style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 20 }}
+      className={`flex items-start gap-2 px-3 py-2 group cursor-pointer transition-all ${
+        theme === 'fantasy' 
+          ? 'hover:bg-fantasy-gold/10 border-l-4 border-transparent hover:border-fantasy-gold' 
+          : 'hover:bg-scifi-cyan/5 border-l-2 border-transparent hover:border-scifi-cyan'
+      }`}
+      style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 25 }}
       onClick={() => onEdit(track)}
-      title="Click to edit track"
+      title={`${track.name} - Click to edit track`}
     >
       <div
-        className="w-4 h-4 rounded-sm flex-shrink-0"
-        style={{ backgroundColor: track.color }}
+        className={`w-3 h-3 flex-shrink-0 mt-1.5 ${theme === 'fantasy' ? 'rounded-sm shadow-sm' : 'rotate-45'}`}
+        style={{ 
+          backgroundColor: track.color,
+          boxShadow: theme === 'scifi' ? `0 0 8px ${track.color}` : undefined
+        }}
       />
       <div className="flex flex-col min-w-0 flex-1">
-        <span className={`text-sm font-bold truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
-          {track.name}
-        </span>
-        <span className={`text-xs truncate ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+        <div className={`font-bold leading-snug ${
+          theme === 'fantasy' 
+            ? 'font-fantasy-heading text-fantasy-text text-[13px]' 
+            : 'font-scifi-heading text-scifi-text uppercase tracking-wide text-[10px]'
+        }`}>
+          {nameLines.map((line, idx) => (
+            <div key={idx}>{line}</div>
+          ))}
+        </div>
+        <span className={`text-[10px] mt-0.5 ${
+          theme === 'fantasy' 
+            ? 'text-fantasy-muted italic font-fantasy-body' 
+            : 'text-scifi-text-dim font-scifi-mono'
+        }`}>
           {track.calendarName}
         </span>
       </div>
       <Pencil 
-        size={14} 
-        className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`} 
+        size={12} 
+        className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1.5 ${
+          theme === 'fantasy' ? 'text-fantasy-gold' : 'text-scifi-cyan'
+        }`} 
       />
     </div>
   );
@@ -1244,7 +1557,7 @@ function StackClusterDetailsPanel({
   );
 }
 
-// Cross-track event component (vertical line/band spanning all tracks)
+// Cross-track event component (vertical line/band spanning all tracks - no label, labels are in dedicated row)
 function CrossTrackEvent({
   event,
   tracks,
@@ -1258,7 +1571,6 @@ function CrossTrackEvent({
   const isPeriod = event.type === 'period';
   const masterYear = isPeriod ? event.masterStartDate.year : event.masterDate.year;
   const x = TRACK_CONTENT_START + (masterYear - masterRange.start) * pixelsPerYear;
-  const displayTitle = event.title || '';
   
   let width = 4;
   if (isPeriod) {
@@ -1278,10 +1590,10 @@ function CrossTrackEvent({
       className="absolute cursor-pointer transition-all group"
       style={{
         left: x,
-        top: 40,
+        top: 20,
         width: isPeriod ? width : 3,
-        height: totalHeight - 20,
-        zIndex: isExpanded ? 25 : 2, // Lower z-index to avoid blocking track events
+        height: totalHeight,
+        zIndex: isExpanded ? 25 : 2,
         pointerEvents: 'auto',
       }}
       onClick={(e) => {
@@ -1299,19 +1611,6 @@ function CrossTrackEvent({
           boxShadow: theme === 'scifi' ? `0 0 10px ${crossTrackColor}` : 'none',
         }}
       />
-
-      {/* Label */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 transition-all pointer-events-auto"
-        style={{ top: -25, width: EVENT_LABEL_WIDTH, maxWidth: EVENT_LABEL_WIDTH }}
-      >
-        <div
-          className={`px-2 py-1 text-[10px] font-bold text-center whitespace-normal break-words ${theme === 'fantasy' ? 'font-fantasy-heading bg-fantasy-card border border-fantasy-border' : 'font-scifi-heading bg-scifi-bg-secondary border border-scifi-border'}`}
-          style={{ color: crossTrackColor }}
-        >
-          {displayTitle}
-        </div>
-      </div>
     </div>
   );
 }

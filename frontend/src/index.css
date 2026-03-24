@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -15,35 +15,50 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Custom scrollbar styles */
-.timeline-scroll::-webkit-scrollbar {
-  height: 8px;
-}
+/* ============================================================
+   FANTASY THEME - "The Chronicle"
+   Inspired by illuminated manuscripts, ancient maps, and medieval tomes
+   ============================================================ */
 
-.timeline-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.theme-fantasy .timeline-scroll::-webkit-scrollbar-thumb {
-  background: #5c3a1e;
-  border-radius: 0;
-  border: 1px solid #3a2210;
-}
-
-.theme-scifi .timeline-scroll::-webkit-scrollbar-thumb {
-  background: #0066cc;
-  border-radius: 0;
-  box-shadow: 0 0 6px #00f3ff;
-}
-
-/* ===================== FANTASY THEME ===================== */
 .theme-fantasy {
-  background-color: #1a1209;
-  background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(60, 30, 10, 0.4) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 30%, rgba(40, 20, 5, 0.3) 0%, transparent 50%);
-  color: #d4c4a0;
-  font-family: 'Crimson Text', Georgia, serif;
+  --fantasy-parchment: #f4e4c1;
+  --fantasy-parchment-dark: #e8d4a8;
+  --fantasy-ink: #2a1810;
+  --fantasy-ink-light: #4a3828;
+  --fantasy-gold: #c9a227;
+  --fantasy-gold-light: #e8c547;
+  --fantasy-crimson: #8b1e3f;
+  --fantasy-forest: #2d5a3d;
+  --fantasy-royal: #1e3a5f;
+  --fantasy-border: #8b7355;
+  --fantasy-shadow: rgba(42, 24, 16, 0.4);
+  
+  background: 
+    /* Subtle paper texture overlay */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+    /* Warm vignette */
+    radial-gradient(ellipse at center, #f4e4c1 0%, #e0c9a0 50%, #c4a67a 100%);
+  background-blend-mode: soft-light, normal;
+  color: var(--fantasy-ink);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.theme-fantasy::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: 
+    /* Corner decorations - top left */
+    radial-gradient(ellipse at 0% 0%, rgba(139, 115, 85, 0.15) 0%, transparent 30%),
+    /* Corner decorations - bottom right */
+    radial-gradient(ellipse at 100% 100%, rgba(139, 115, 85, 0.15) 0%, transparent 30%),
+    /* Aged edges */
+    linear-gradient(to right, rgba(139, 115, 85, 0.1) 0%, transparent 3%, transparent 97%, rgba(139, 115, 85, 0.1) 100%),
+    linear-gradient(to bottom, rgba(139, 115, 85, 0.08) 0%, transparent 3%, transparent 97%, rgba(139, 115, 85, 0.08) 100%);
+  z-index: 0;
 }
 
 .theme-fantasy h1,
@@ -51,17 +66,83 @@ html, body, #root {
 .theme-fantasy h3,
 .theme-fantasy h4 {
   font-family: 'Cinzel', serif;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--fantasy-ink);
+  text-shadow: 1px 1px 0 rgba(244, 228, 193, 0.8);
 }
 
-/* ===================== SCI-FI THEME ===================== */
+/* Fantasy Scrollbar */
+.theme-fantasy .timeline-scroll::-webkit-scrollbar {
+  height: 12px;
+  background: linear-gradient(to bottom, #d4c4a0, #c4b090);
+  border-top: 1px solid #8b7355;
+  border-bottom: 1px solid #8b7355;
+}
+
+.theme-fantasy .timeline-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #8b7355, #6b5340, #8b7355);
+  border: 1px solid #5a4330;
+  border-radius: 0;
+}
+
+.theme-fantasy .timeline-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #9b8365, #7b6350, #9b8365);
+}
+
+/* ============================================================
+   SCI-FI THEME - "The Holograph"
+   Inspired by holographic displays, space terminals, and cyberpunk UIs
+   ============================================================ */
+
 .theme-scifi {
-  background-color: #050510;
-  background-image:
-    radial-gradient(ellipse at 30% 50%, rgba(0, 50, 100, 0.15) 0%, transparent 60%),
-    radial-gradient(ellipse at 70% 30%, rgba(100, 0, 100, 0.08) 0%, transparent 50%);
-  color: #e0e0ff;
-  font-family: 'Rajdhani', sans-serif;
+  --scifi-void: #030308;
+  --scifi-deep: #0a0a1a;
+  --scifi-surface: #12122a;
+  --scifi-cyan: #00e5ff;
+  --scifi-cyan-dim: #007a8a;
+  --scifi-magenta: #e040fb;
+  --scifi-magenta-dim: #7b1fa2;
+  --scifi-text: #e8f4f8;
+  --scifi-text-dim: #8899aa;
+  --scifi-grid: rgba(0, 229, 255, 0.03);
+  --scifi-glow: rgba(0, 229, 255, 0.6);
+  
+  background: 
+    /* Subtle grid pattern */
+    linear-gradient(var(--scifi-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--scifi-grid) 1px, transparent 1px),
+    /* Deep space gradient */
+    radial-gradient(ellipse at 20% 80%, rgba(0, 100, 150, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(100, 0, 150, 0.06) 0%, transparent 50%),
+    var(--scifi-void);
+  background-size: 50px 50px, 50px 50px, 100% 100%, 100% 100%, 100% 100%;
+  color: var(--scifi-text);
+  font-family: 'Exo 2', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.theme-scifi::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: 
+    /* Scanlines */
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 229, 255, 0.015) 2px,
+      rgba(0, 229, 255, 0.015) 4px
+    ),
+    /* Corner glow - top */
+    linear-gradient(to bottom, rgba(0, 229, 255, 0.05) 0%, transparent 150px),
+    /* Edge glow - bottom */
+    linear-gradient(to top, rgba(224, 64, 251, 0.03) 0%, transparent 100px);
+  z-index: 0;
 }
 
 .theme-scifi h1,
@@ -69,76 +150,345 @@ html, body, #root {
 .theme-scifi h3,
 .theme-scifi h4 {
   font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.15em;
+  font-weight: 500;
+  color: var(--scifi-cyan);
+  text-shadow: 0 0 20px var(--scifi-glow), 0 0 40px rgba(0, 229, 255, 0.3);
+  text-transform: uppercase;
 }
 
-/* ===================== ANIMATIONS ===================== */
-.scanlines::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,243,255,0.015) 2px, rgba(0,243,255,0.015) 4px);
-  z-index: 1;
+/* Sci-Fi Scrollbar */
+.theme-scifi .timeline-scroll::-webkit-scrollbar {
+  height: 8px;
+  background: var(--scifi-deep);
+  border-top: 1px solid var(--scifi-cyan-dim);
 }
 
+.theme-scifi .timeline-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, var(--scifi-cyan-dim), var(--scifi-cyan), var(--scifi-cyan-dim));
+  box-shadow: 0 0 10px var(--scifi-glow);
+  border: none;
+}
+
+.theme-scifi .timeline-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--scifi-cyan);
+  box-shadow: 0 0 15px var(--scifi-glow), 0 0 30px rgba(0, 229, 255, 0.4);
+}
+
+/* ============================================================
+   SHARED ANIMATIONS
+   ============================================================ */
+
+@keyframes fantasyGlow {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(201, 162, 39, 0.3), inset 0 0 10px rgba(201, 162, 39, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(201, 162, 39, 0.5), inset 0 0 15px rgba(201, 162, 39, 0.15);
+  }
+}
+
+@keyframes scifiPulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px var(--scifi-glow), 0 0 10px rgba(0, 229, 255, 0.2);
+    border-color: var(--scifi-cyan);
+  }
+  50% { 
+    box-shadow: 0 0 15px var(--scifi-glow), 0 0 30px rgba(0, 229, 255, 0.3);
+    border-color: var(--scifi-cyan);
+  }
+}
+
+@keyframes scifiScan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* Fuzzy marker for undated events */
 @keyframes fuzzyPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
 }
 .fuzzy-marker { animation: fuzzyPulse 3s ease-in-out infinite; }
 
-@keyframes neonGlow {
-  0%, 100% { box-shadow: 0 0 5px #00f3ff, 0 0 10px rgba(0,243,255,0.3); }
-  50% { box-shadow: 0 0 10px #00f3ff, 0 0 20px rgba(0,243,255,0.5), 0 0 30px rgba(0,243,255,0.2); }
-}
-.neon-glow { animation: neonGlow 2s ease-in-out infinite; }
-
-@keyframes torchFlicker {
-  0%, 100% { opacity: 0.85; }
-  30% { opacity: 0.95; }
-  60% { opacity: 0.8; }
-  80% { opacity: 1; }
-}
-
+/* Period bar hover */
 .period-bar { transition: all 0.3s ease; }
-.period-bar:hover { filter: brightness(1.3); }
+.period-bar:hover { filter: brightness(1.2); }
 
+/* Theme transition */
 .theme-transition {
-  transition: background-color 0.5s ease, color 0.5s ease;
+  transition: background-color 0.5s ease, color 0.5s ease, background 0.5s ease;
 }
 
-/* ===================== TIMELINE AXIS HITBOX ===================== */
+/* ============================================================
+   FANTASY SPECIFIC COMPONENTS
+   ============================================================ */
+
+/* Fantasy buttons */
+.theme-fantasy button,
+.theme-fantasy .btn {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+}
+
+/* Fantasy cards and panels */
+.theme-fantasy .card,
+.theme-fantasy .panel {
+  background: linear-gradient(135deg, rgba(244, 228, 193, 0.95), rgba(232, 212, 168, 0.9));
+  border: 2px solid var(--fantasy-border);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 4px 12px var(--fantasy-shadow),
+    0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Fantasy input fields */
+.theme-fantasy input,
+.theme-fantasy select,
+.theme-fantasy textarea {
+  background: rgba(255, 250, 240, 0.9);
+  border: 1px solid var(--fantasy-border);
+  color: var(--fantasy-ink);
+  font-family: 'Cormorant Garamond', serif;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+
+.theme-fantasy input:focus,
+.theme-fantasy select:focus,
+.theme-fantasy textarea:focus {
+  outline: none;
+  border-color: var(--fantasy-gold);
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.2);
+}
+
+/* ============================================================
+   SCI-FI SPECIFIC COMPONENTS
+   ============================================================ */
+
+/* Sci-Fi buttons */
+.theme-scifi button,
+.theme-scifi .btn {
+  font-family: 'Exo 2', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Sci-Fi cards and panels */
+.theme-scifi .card,
+.theme-scifi .panel {
+  background: linear-gradient(135deg, rgba(18, 18, 42, 0.95), rgba(10, 10, 26, 0.98));
+  border: 1px solid var(--scifi-cyan-dim);
+  box-shadow: 
+    0 0 20px rgba(0, 229, 255, 0.1),
+    inset 0 1px 0 rgba(0, 229, 255, 0.1);
+}
+
+/* Sci-Fi input fields */
+.theme-scifi input,
+.theme-scifi select,
+.theme-scifi textarea {
+  background: rgba(3, 3, 8, 0.8);
+  border: 1px solid var(--scifi-cyan-dim);
+  color: var(--scifi-text);
+  font-family: 'Share Tech Mono', monospace;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+
+.theme-scifi input:focus,
+.theme-scifi select:focus,
+.theme-scifi textarea:focus {
+  outline: none;
+  border-color: var(--scifi-cyan);
+  box-shadow: 0 0 10px var(--scifi-glow), inset 0 0 5px rgba(0, 229, 255, 0.1);
+}
+
+/* ============================================================
+   TIMELINE AXIS HITBOX
+   ============================================================ */
+
 .axis-hitbox {
   cursor: crosshair;
   transition: background-color 0.2s;
 }
+
 .theme-fantasy .axis-hitbox:hover {
-  background: rgba(212, 175, 100, 0.08);
-}
-.theme-scifi .axis-hitbox:hover {
-  background: rgba(0, 243, 255, 0.04);
+  background: rgba(201, 162, 39, 0.1);
 }
 
-/* ===================== THUMBNAIL IMAGES ===================== */
+.theme-scifi .axis-hitbox:hover {
+  background: rgba(0, 229, 255, 0.05);
+}
+
+/* ============================================================
+   THUMBNAIL IMAGES
+   ============================================================ */
+
 .event-thumbnail {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
 .event-thumbnail:hover {
   transform: scale(1.1);
 }
+
 .theme-fantasy .event-thumbnail {
-  border: 2px solid #5c3a1e;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  border: 3px solid var(--fantasy-border);
+  box-shadow: 0 2px 8px var(--fantasy-shadow);
+  border-radius: 50%;
 }
+
 .theme-fantasy .event-thumbnail:hover {
-  border-color: #d4af37;
-  box-shadow: 0 0 12px rgba(212,175,55,0.3);
+  border-color: var(--fantasy-gold);
+  box-shadow: 0 0 15px rgba(201, 162, 39, 0.4);
 }
+
 .theme-scifi .event-thumbnail {
-  border: 1px solid rgba(0,243,255,0.3);
-  box-shadow: 0 0 6px rgba(0,243,255,0.15);
+  border: 2px solid var(--scifi-cyan-dim);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+  border-radius: 50%;
 }
+
 .theme-scifi .event-thumbnail:hover {
-  border-color: #00f3ff;
-  box-shadow: 0 0 12px rgba(0,243,255,0.4);
+  border-color: var(--scifi-cyan);
+  box-shadow: 0 0 20px var(--scifi-glow);
+}
+
+/* ============================================================
+   MODAL POSITIONING - Collision Prevention
+   ============================================================ */
+
+/* Ensure modals stay within viewport */
+.modal-container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.modal-content {
+  max-height: calc(100vh - 40px);
+  max-width: calc(100vw - 40px);
+  overflow-y: auto;
+}
+
+/* ============================================================
+   TOOLTIP POSITIONING - Collision Prevention
+   ============================================================ */
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 8px);
+  white-space: nowrap;
+  padding: 6px 12px;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 100;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+.theme-fantasy [data-tooltip]::after {
+  background: var(--fantasy-ink);
+  color: var(--fantasy-parchment);
+  border: 1px solid var(--fantasy-border);
+}
+
+.theme-scifi [data-tooltip]::after {
+  background: var(--scifi-surface);
+  color: var(--scifi-cyan);
+  border: 1px solid var(--scifi-cyan-dim);
+  box-shadow: 0 0 10px var(--scifi-glow);
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+
+/* Fantasy decorative border */
+.fantasy-border {
+  border: 2px solid var(--fantasy-border);
+  position: relative;
+}
+
+.fantasy-border::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(139, 115, 85, 0.3);
+  pointer-events: none;
+}
+
+/* Sci-Fi corner accents */
+.scifi-corners {
+  position: relative;
+}
+
+.scifi-corners::before,
+.scifi-corners::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: var(--scifi-cyan);
+  border-style: solid;
+  border-width: 0;
+}
+
+.scifi-corners::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.scifi-corners::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+/* Glow effects */
+.fantasy-glow {
+  animation: fantasyGlow 3s ease-in-out infinite;
+}
+
+.scifi-glow {
+  animation: scifiPulse 2s ease-in-out infinite;
+}
+
+/* Text styles */
+.text-fantasy-heading {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.08em;
+}
+
+.text-scifi-heading {
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
 }
