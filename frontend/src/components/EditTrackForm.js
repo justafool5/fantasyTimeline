@@ -24,14 +24,18 @@ export default function EditTrackForm({ track, onClose }) {
     e.preventDefault();
     if (!form.name.trim() || !form.calendarName.trim()) return;
 
+    const parsedEpoch = parseInt(form.epoch, 10);
+    const parsedStartYear = parseInt(form.startYear, 10);
+    const parsedEndYear = parseInt(form.endYear, 10);
+
     updateTrack(track.id, {
       name: form.name.trim(),
       calendarName: form.calendarName.trim(),
       abbr: form.abbr.trim() || form.calendarName.substring(0, 2).toUpperCase(),
       color: form.color,
-      epoch: parseInt(form.epoch) || 0,
-      startYear: parseInt(form.startYear) || -500,
-      endYear: parseInt(form.endYear) || 1000,
+      epoch: Number.isNaN(parsedEpoch) ? 0 : parsedEpoch,
+      startYear: Number.isNaN(parsedStartYear) ? -500 : parsedStartYear,
+      endYear: Number.isNaN(parsedEndYear) ? 1000 : parsedEndYear,
     });
     onClose();
   };
