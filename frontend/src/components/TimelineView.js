@@ -1135,15 +1135,11 @@ function TrackRow({
       rows[key].push(evt);
     });
 
-    // Use the wider of label width and EVENT_LABEL_WIDTH (for tags on opposite side)
-    const effectiveHalfWidth = EVENT_LABEL_WIDTH / 2;
-
-    // First pass: check collisions within same row (label vs label)
     ['above', 'below'].forEach((key) => {
       let lastRightEdge = -Infinity;
       rows[key].forEach((evt) => {
-        const left = evt.x - effectiveHalfWidth;
-        const right = evt.x + effectiveHalfWidth;
+        const left = evt.x - evt.labelWidth / 2;
+        const right = evt.x + evt.labelWidth / 2;
         const isVisible = left >= lastRightEdge + EVENT_LABEL_GUTTER;
         visibility.set(evt.id, isVisible);
         if (isVisible) {
@@ -1151,31 +1147,6 @@ function TrackRow({
         }
       });
     });
-
-    // Second pass: check cross-row collisions (tags on opposite side vs other row's labels)
-    // An above event's tags appear below the line and can overlap with below events' labels
-    // A below event's tags appear above the line and can overlap with above events' labels
-    const checkCrossRow = (tagRow, labelRow) => {
-      const visibleLabelEvents = labelRow.filter(evt => visibility.get(evt.id));
-      tagRow.forEach((tagEvt) => {
-        if (!visibility.get(tagEvt.id)) return; // already hidden
-        if (!tagEvt.resolvedTags || tagEvt.resolvedTags.length === 0) return; // no tags
-        const tagLeft = tagEvt.x - effectiveHalfWidth;
-        const tagRight = tagEvt.x + effectiveHalfWidth;
-        visibleLabelEvents.forEach((labelEvt) => {
-          if (!visibility.get(labelEvt.id)) return;
-          const labelLeft = labelEvt.x - effectiveHalfWidth;
-          const labelRight = labelEvt.x + effectiveHalfWidth;
-          // Check horizontal overlap
-          if (tagRight > labelLeft - EVENT_LABEL_GUTTER && tagLeft < labelRight + EVENT_LABEL_GUTTER) {
-            // Hide the event with tags that causes the overlap (keep the label-row event visible)
-            visibility.set(tagEvt.id, false);
-          }
-        });
-      });
-    };
-    checkCrossRow(rows.above, rows.below);
-    checkCrossRow(rows.below, rows.above);
 
     return visibility;
   }, [clusteredItems]);
@@ -1428,36 +1399,7 @@ function TrackRow({
               title={isUndated ? `${evt.title} (undated - approximate position)` : evt.title}
             />
 
-            {/* Tags on opposite side of the line from the main label */}
-            {showLabel && evt.resolvedTags.length > 0 && (
-              <div
-                className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
-                style={{
-                  ...(evt.above ? { top: 20 } : { bottom: 0, marginBottom: 12 }),
-                  width: EVENT_LABEL_WIDTH,
-                }}
-              >
-                <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-full">
-                  {evt.resolvedTags.slice(0, 3).map(tag => (
-                    <span
-                      key={`${evt.id}-opposite-tag-${tag.id}`}
-                      className="px-2 py-0.5 text-[11px] font-bold max-w-full leading-none"
-                      style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
-                      title={tag.label}
-                    >
-                      {tag.label}
-                    </span>
-                  ))}
-                  {evt.resolvedTags.length > 3 && (
-                    <span className={`px-2 py-0.5 text-[11px] font-bold leading-none ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
-                      +{evt.resolvedTags.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Main label: image, date, title (tags are on the other side) */}
+            {/* Main label: image, date, title */}
             <div
               className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
               style={{
@@ -1513,23 +1455,6 @@ function TrackRow({
                   <div className={`text-[13px] font-bold tracking-wide text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
                     ...
                   </div>
-                  {evt.resolvedTags.length > 0 && (
-                    <div className="flex items-center justify-center gap-1">
-                      {evt.resolvedTags.slice(0, 3).map(tag => (
-                        <span
-                          key={`${evt.id}-hidden-tag-dot-${tag.id}`}
-                          className="inline-block h-[6px] min-w-[10px] rounded-[2px]"
-                          style={{ backgroundColor: tag.color }}
-                          title={tag.label}
-                        />
-                      ))}
-                      {evt.resolvedTags.length > 3 && (
-                        <span className={`text-[10px] font-bold ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                          +{evt.resolvedTags.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
             </div>
