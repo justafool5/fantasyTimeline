@@ -899,9 +899,9 @@ function TrackLabel({ track, trackIndex, theme, onEdit }) {
             <div key={idx}>{line}</div>
           ))}
         </div>
-        <span className={`text-[10px] mt-0.5 ${
-          theme === 'fantasy' 
-            ? 'text-fantasy-muted italic font-fantasy-body' 
+        <span className={`text-[10px] font-medium mt-0.5 ${
+          theme === 'fantasy'
+            ? 'text-fantasy-text-light italic font-fantasy-body'
             : 'text-scifi-text-dim font-scifi-mono'
         }`}>
           {track.calendarName}
@@ -1212,7 +1212,7 @@ function TrackRow({
           style={{ left: TRACK_CONTENT_START + m.x, top: AXIS_OFFSET - 20 }}
         >
           <div className={`h-5 w-px ${theme === 'fantasy' ? 'bg-fantasy-border/30' : 'bg-scifi-border/25'}`} />
-          <span className={`text-[11px] mt-0.5 whitespace-nowrap select-none ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted/50'}`}>
+          <span className={`text-[11px] font-medium mt-0.5 whitespace-nowrap select-none ${theme === 'fantasy' ? 'text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
             {formatYear(m.localYear)} {track.abbr}
           </span>
         </div>
@@ -1441,7 +1441,7 @@ function TrackRow({
                       )}
                     </div>
                   )}
-                  <div className={`text-[11px] mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+                  <div className={`text-[11px] font-medium mt-0.5 ${theme === 'fantasy' ? 'text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
                     {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
                   </div>
                 </>
@@ -1546,7 +1546,7 @@ function StackClusterDetailsPanel({
                   ))}
                 </div>
               )}
-              <div className={`mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+              <div className={`mt-1 font-medium ${theme === 'fantasy' ? 'text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
                 {formatYear(evt.year)} {stackCluster.trackAbbr}
               </div>
             </button>
