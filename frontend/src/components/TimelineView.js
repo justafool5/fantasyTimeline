@@ -19,7 +19,7 @@ import AddTrackForm from './AddTrackForm';
 import EditTrackForm from './EditTrackForm';
 import EditTimelineForm from './EditTimelineForm';
 import EditTagDefinitionsForm from './EditTagDefinitionsForm';
-import { Plus, ArrowLeft, Settings, Pencil, X, Download, ChevronDown, Globe } from 'lucide-react';
+import { Plus, ArrowLeft, Settings, Pencil, X, Globe } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
@@ -39,76 +39,6 @@ const ESTIMATED_CHAR_WIDTH = 6.5;
 const CROSS_TRACK_LABELS_HEIGHT = 50;
 const TRACK_NAME_MAX_LENGTH = 75;
 const CROSS_TRACK_CLUSTER_DISTANCE_PX = 100;
-
-// Tools Menu Component (consolidated settings, export, etc.)
-function ToolsMenu({ theme, onEditTimeline, onDownloadJSON }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  return (
-    <div ref={menuRef} className="relative">
-      <button
-        data-testid="tools-menu-btn"
-        data-interactive="true"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all ${
-          theme === 'fantasy' 
-            ? 'bg-fantasy-bg-card text-fantasy-text-light border-2 border-fantasy-border hover:border-fantasy-gold hover:text-fantasy-gold font-fantasy-heading shadow-sm' 
-            : 'bg-scifi-bg-surface text-scifi-text-dim border border-scifi-cyan-dim hover:border-scifi-cyan hover:text-scifi-cyan hover:shadow-scifi-glow font-scifi-heading uppercase tracking-wider'
-        }`}
-      >
-        <Settings size={14} />
-        <span>Tools</span>
-        <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      
-      {isOpen && (
-        <div className={`absolute top-full right-0 mt-2 min-w-[180px] z-50 ${
-          theme === 'fantasy'
-            ? 'bg-fantasy-bg-card border-2 border-fantasy-border shadow-fantasy-lg'
-            : 'bg-scifi-bg-elevated border border-scifi-cyan-dim shadow-scifi-lg'
-        }`}>
-          <button
-            data-testid="edit-timeline-btn"
-            onClick={() => { onEditTimeline(); setIsOpen(false); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-left text-xs font-bold transition-all ${
-              theme === 'fantasy'
-                ? 'text-fantasy-text hover:bg-fantasy-gold/10 hover:text-fantasy-gold font-fantasy-heading border-b border-fantasy-border/40'
-                : 'text-scifi-text hover:bg-scifi-cyan/10 hover:text-scifi-cyan font-scifi-heading uppercase tracking-wider border-b border-scifi-cyan-dim/30'
-            }`}
-          >
-            <Settings size={14} />
-            Timeline Settings
-          </button>
-          <button
-            data-testid="json-download-btn"
-            onClick={() => { onDownloadJSON(); setIsOpen(false); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-left text-xs font-bold transition-all ${
-              theme === 'fantasy'
-                ? 'text-fantasy-text hover:bg-fantasy-gold/10 hover:text-fantasy-gold font-fantasy-heading'
-                : 'text-scifi-text hover:bg-scifi-cyan/10 hover:text-scifi-cyan font-scifi-heading uppercase tracking-wider'
-            }`}
-          >
-            <Download size={14} />
-            Export JSON
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // Cross-track events dedicated label row (fixed between header and timeline)
 function CrossTrackLabelsRow({ 
@@ -367,45 +297,40 @@ export default function TimelineView() {
   const timelineAreaRef = useRef(null);
   const sidebarRef = useRef(null);
   
-  // Sync vertical scrolling between sidebar and timeline
+  // Sync vertical scrolling: timeline scrolls, sidebar follows via transform
   useEffect(() => {
-    const syncScroll = (source, target) => {
-      if (target) {
-        target.scrollTop = source.scrollTop;
-      }
-    };
-    
     const handleTimelineScroll = () => {
       if (scrollRef.current && sidebarRef.current) {
-        syncScroll(scrollRef.current, sidebarRef.current);
-      }
-    };
-    
-    const handleSidebarScroll = () => {
-      if (sidebarRef.current && scrollRef.current) {
-        syncScroll(sidebarRef.current, scrollRef.current);
+        const scrollTop = scrollRef.current.scrollTop;
+        sidebarRef.current.style.transform = `translateY(-${scrollTop}px)`;
       }
     };
     
     const timeline = scrollRef.current;
-    const sidebar = sidebarRef.current;
-    
     if (timeline) {
       timeline.addEventListener('scroll', handleTimelineScroll);
-    }
-    if (sidebar) {
-      sidebar.addEventListener('scroll', handleSidebarScroll);
     }
     
     return () => {
       if (timeline) {
         timeline.removeEventListener('scroll', handleTimelineScroll);
       }
-      if (sidebar) {
-        sidebar.removeEventListener('scroll', handleSidebarScroll);
-      }
     };
   }, [scrollRef]);
+
+  // Listen for custom events from ToolsMenu in App.js
+  useEffect(() => {
+    const handleAddTrack = () => setShowAddTrack(true);
+    const handleEditTimeline = () => setShowEditTimeline(true);
+    
+    window.addEventListener('timeline:addTrack', handleAddTrack);
+    window.addEventListener('timeline:editTimeline', handleEditTimeline);
+    
+    return () => {
+      window.removeEventListener('timeline:addTrack', handleAddTrack);
+      window.removeEventListener('timeline:editTimeline', handleEditTimeline);
+    };
+  }, []);
   
   // Navigation stack for drilling into periods
   const [navStack, setNavStack] = useState([]); // [{ periodEventId, parentTrackId }]
@@ -598,8 +523,8 @@ export default function TimelineView() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative z-10">
-      {/* Header */}
-      <div className={`text-center py-5 px-6 flex-shrink-0 relative ${
+      {/* Header - simplified with only title and description */}
+      <div className={`text-center py-4 px-6 flex-shrink-0 relative ${
         theme === 'fantasy' 
           ? 'bg-gradient-to-b from-fantasy-bg-dark/90 to-fantasy-bg/80 border-b-2 border-fantasy-border shadow-fantasy' 
           : 'bg-gradient-to-b from-scifi-bg-elevated/95 to-scifi-bg-surface/90 border-b border-scifi-cyan-dim/50 shadow-scifi'
@@ -639,7 +564,7 @@ export default function TimelineView() {
             </h1>
             {/* Description - only show on main timeline, not when drilled in */}
             {!currentPeriod && timelineMeta.description && (
-              <p data-testid="timeline-description" className={`text-sm mt-2 max-w-2xl leading-relaxed ${
+              <p data-testid="timeline-description" className={`text-sm mt-1 max-w-2xl leading-relaxed ${
                 theme === 'fantasy' 
                   ? 'text-fantasy-text-light font-fantasy-body italic' 
                   : 'text-scifi-text-dim font-scifi-body tracking-wide'
@@ -676,29 +601,6 @@ export default function TimelineView() {
             }
             return null;
           })()}
-          
-          {!currentPeriod && (
-            <div className="flex items-center gap-2">
-              {/* Tools Menu */}
-              <ToolsMenu 
-                theme={theme} 
-                onEditTimeline={() => setShowEditTimeline(true)}
-                onDownloadJSON={downloadFullTimelineJSON}
-              />
-              <button
-                data-testid="add-track-btn"
-                data-interactive="true"
-                onClick={() => setShowAddTrack(true)}
-                className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold transition-all ${
-                  theme === 'fantasy' 
-                    ? 'bg-fantasy-gold text-fantasy-bg-dark border-2 border-fantasy-gold hover:bg-fantasy-accent-light font-fantasy-heading shadow-fantasy-glow' 
-                    : 'bg-scifi-cyan/20 text-scifi-cyan border border-scifi-cyan hover:bg-scifi-cyan/30 hover:shadow-scifi-glow font-scifi-heading uppercase tracking-wider'
-                }`}
-              >
-                <Plus size={14} /> Add Track
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -718,36 +620,42 @@ export default function TimelineView() {
 
       {/* Main content area with fixed sidebar and scrollable timeline */}
       <div className="flex-1 flex overflow-hidden relative" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
-        {/* Fixed left sidebar with track names */}
+        {/* Fixed left sidebar with track names - no scroll, synced via JS */}
         <div 
           ref={sidebarRef}
-          className={`flex-shrink-0 w-52 overflow-y-auto overflow-x-hidden relative z-10 sidebar-scroll ${
+          className={`flex-shrink-0 w-52 overflow-hidden relative z-10 ${
             theme === 'fantasy' 
               ? 'bg-gradient-to-r from-fantasy-bg-dark/95 to-fantasy-bg-dark/80 border-r-2 border-fantasy-border/60 shadow-lg' 
               : 'bg-gradient-to-r from-scifi-bg-elevated/98 to-scifi-bg-surface/95 border-r border-scifi-cyan-dim/40'
           }`}
           style={{ paddingTop: 20 }}
         >
-          {currentPeriod ? (
-            <TrackLabel
-              track={drilledDisplayTrack || (currentPeriod.parentTrackId
-                ? allTracks.find(t => t.id === currentPeriod.parentTrackId)
-                : allTracks[0])}
-              trackIndex={0}
-              theme={theme}
-              onEdit={setEditingTrack}
-            />
-          ) : (
-            allTracks.map((track, trackIndex) => (
+          <div className="relative" style={{ 
+            minHeight: currentPeriod 
+              ? TRACK_HEIGHT + 100
+              : allTracks.length * TRACK_HEIGHT + 100 
+          }}>
+            {currentPeriod ? (
               <TrackLabel
-                key={track.id}
-                track={track}
-                trackIndex={trackIndex}
+                track={drilledDisplayTrack || (currentPeriod.parentTrackId
+                  ? allTracks.find(t => t.id === currentPeriod.parentTrackId)
+                  : allTracks[0])}
+                trackIndex={0}
                 theme={theme}
                 onEdit={setEditingTrack}
               />
-            ))
-          )}
+            ) : (
+              allTracks.map((track, trackIndex) => (
+                <TrackLabel
+                  key={track.id}
+                  track={track}
+                  trackIndex={trackIndex}
+                  theme={theme}
+                  onEdit={setEditingTrack}
+                />
+              ))
+            )}
+          </div>
         </div>
 
         {selectedStackCluster && (

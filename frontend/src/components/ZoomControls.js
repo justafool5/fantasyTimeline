@@ -47,13 +47,6 @@ export default function ZoomControls() {
       >
         <ZoomOut size={18} />
       </button>
-      <div className={`text-center text-xs mt-1 px-1 py-0.5 rounded ${
-        theme === 'fantasy' 
-          ? 'text-fantasy-muted font-fantasy-body' 
-          : 'text-scifi-cyan font-scifi-mono'
-      }`}>
-        {Math.round(zoom * 100)}%
-      </div>
     </div>
   );
 }
