@@ -294,29 +294,53 @@ export default function TimelineView() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden relative z-10">
       {/* Header */}
-      <div className={`text-center py-4 px-6 flex-shrink-0 ${theme === 'fantasy' ? 'border-b border-fantasy-border/40 bg-fantasy-card/60' : 'border-b border-scifi-border/40 bg-scifi-bg-secondary/50'}`}>
-        <div className="flex items-center justify-center gap-4">
+      <div className={`text-center py-5 px-6 flex-shrink-0 relative ${
+        theme === 'fantasy' 
+          ? 'bg-gradient-to-b from-fantasy-bg-dark/90 to-fantasy-bg/80 border-b-2 border-fantasy-border shadow-fantasy' 
+          : 'bg-gradient-to-b from-scifi-bg-elevated/95 to-scifi-bg-surface/90 border-b border-scifi-cyan-dim/50 shadow-scifi'
+      }`}>
+        {/* Sci-fi scan line effect */}
+        {theme === 'scifi' && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+            <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-scifi-cyan to-transparent" 
+                 style={{ animation: 'scifiScan 3s linear infinite' }} />
+          </div>
+        )}
+        
+        <div className="flex items-center justify-center gap-5 relative">
           {/* Back button when drilled into a period */}
           {currentPeriod && (
             <button
               data-testid="back-btn"
               data-interactive="true"
               onClick={() => setNavStack(prev => prev.slice(0, -1))}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border hover:text-fantasy-accent hover:border-fantasy-accent/50 font-fantasy-heading' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:text-scifi-accent hover:border-scifi-accent/50 font-scifi-heading'}`}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold transition-all ${
+                theme === 'fantasy' 
+                  ? 'bg-fantasy-bg-card text-fantasy-text-light border-2 border-fantasy-border hover:border-fantasy-gold hover:text-fantasy-gold font-fantasy-heading shadow-fantasy' 
+                  : 'bg-scifi-bg-surface text-scifi-text-dim border border-scifi-cyan-dim hover:border-scifi-cyan hover:text-scifi-cyan font-scifi-heading uppercase tracking-wider'
+              }`}
             >
               <ArrowLeft size={14} /> Back
             </button>
           )}
           
           <div className="flex flex-col items-center">
-            <h1 data-testid="timeline-title" className={`text-2xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-lg tracking-widest'}`}>
+            <h1 data-testid="timeline-title" className={`text-3xl font-bold ${
+              theme === 'fantasy' 
+                ? 'font-fantasy-heading text-fantasy-text tracking-wide' 
+                : 'font-scifi-heading text-scifi-cyan text-xl tracking-[0.2em] uppercase'
+            }`}>
               {currentPeriod ? currentPeriod.periodEvent.title : timelineMeta.title}
             </h1>
             {/* Description - only show on main timeline, not when drilled in */}
             {!currentPeriod && timelineMeta.description && (
-              <p data-testid="timeline-description" className={`text-sm mt-1 max-w-xl ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-body' : 'text-scifi-muted font-scifi-body'}`}>
+              <p data-testid="timeline-description" className={`text-sm mt-2 max-w-2xl leading-relaxed ${
+                theme === 'fantasy' 
+                  ? 'text-fantasy-text-light font-fantasy-body italic' 
+                  : 'text-scifi-text-dim font-scifi-body tracking-wide'
+              }`}>
                 {timelineMeta.description}
               </p>
             )}
@@ -327,16 +351,23 @@ export default function TimelineView() {
             const pe = currentPeriod.periodEvent;
             const track = allTracks.find(t => t.id === pe.trackId);
             if (pe.trackId === null) {
-              // Cross-track period
               return (
-                <span className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                  (Reference: {pe.masterStartDate.year} — {pe.masterEndDate.year})
+                <span className={`text-sm px-3 py-1 rounded ${
+                  theme === 'fantasy' 
+                    ? 'text-fantasy-muted bg-fantasy-bg-dark/50 border border-fantasy-border/50' 
+                    : 'text-scifi-text-dim bg-scifi-bg/50 border border-scifi-cyan-dim/30'
+                }`}>
+                  Reference: {pe.masterStartDate.year} — {pe.masterEndDate.year}
                 </span>
               );
             } else if (track) {
               return (
-                <span className={`text-sm ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                  ({pe.startDate.year} — {pe.endDate.year} {track.abbr})
+                <span className={`text-sm px-3 py-1 rounded ${
+                  theme === 'fantasy' 
+                    ? 'text-fantasy-muted bg-fantasy-bg-dark/50 border border-fantasy-border/50' 
+                    : 'text-scifi-text-dim bg-scifi-bg/50 border border-scifi-cyan-dim/30'
+                }`}>
+                  {pe.startDate.year} — {pe.endDate.year} {track.abbr}
                 </span>
               );
             }
@@ -344,12 +375,16 @@ export default function TimelineView() {
           })()}
           
           {!currentPeriod && (
-            <>
+            <div className="flex items-center gap-3">
               <button
                 data-testid="edit-timeline-btn"
                 data-interactive="true"
                 onClick={() => setShowEditTimeline(true)}
-                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-bg text-fantasy-muted border border-fantasy-border hover:text-fantasy-accent hover:border-fantasy-accent/50 font-fantasy-heading' : 'bg-scifi-bg text-scifi-muted border border-scifi-border hover:text-scifi-accent hover:border-scifi-accent/50 font-scifi-heading'}`}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all ${
+                  theme === 'fantasy' 
+                    ? 'bg-fantasy-bg-card text-fantasy-text-light border-2 border-fantasy-border hover:border-fantasy-gold hover:text-fantasy-gold font-fantasy-heading shadow-sm' 
+                    : 'bg-scifi-bg-surface text-scifi-text-dim border border-scifi-cyan-dim hover:border-scifi-cyan hover:text-scifi-cyan hover:shadow-scifi-glow font-scifi-heading uppercase tracking-wider'
+                }`}
               >
                 <Settings size={14} />
               </button>
@@ -357,20 +392,28 @@ export default function TimelineView() {
                 data-testid="add-track-btn"
                 data-interactive="true"
                 onClick={() => setShowAddTrack(true)}
-                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold transition-all ${theme === 'fantasy' ? 'bg-fantasy-accent/20 text-fantasy-accent border border-fantasy-accent/40 hover:bg-fantasy-accent/30 font-fantasy-heading' : 'bg-scifi-accent/20 text-scifi-accent border border-scifi-accent/40 hover:bg-scifi-accent/30 font-scifi-heading'}`}
+                className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold transition-all ${
+                  theme === 'fantasy' 
+                    ? 'bg-fantasy-gold text-fantasy-bg-dark border-2 border-fantasy-gold hover:bg-fantasy-accent-light font-fantasy-heading shadow-fantasy-glow' 
+                    : 'bg-scifi-cyan/20 text-scifi-cyan border border-scifi-cyan hover:bg-scifi-cyan/30 hover:shadow-scifi-glow font-scifi-heading uppercase tracking-wider'
+                }`}
               >
                 <Plus size={14} /> Add Track
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>
 
       {/* Main content area with fixed sidebar and scrollable timeline */}
-      <div className="flex-1 flex overflow-hidden" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
+      <div className="flex-1 flex overflow-hidden relative" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
         {/* Fixed left sidebar with track names */}
         <div 
-          className={`flex-shrink-0 w-48 overflow-y-auto ${theme === 'fantasy' ? 'bg-fantasy-card/80 border-r border-fantasy-border/30' : 'bg-scifi-bg-secondary/80 border-r border-scifi-border/30'}`}
+          className={`flex-shrink-0 w-52 overflow-y-auto relative z-10 ${
+            theme === 'fantasy' 
+              ? 'bg-gradient-to-r from-fantasy-bg-dark/95 to-fantasy-bg-dark/80 border-r-2 border-fantasy-border/60 shadow-lg' 
+              : 'bg-gradient-to-r from-scifi-bg-elevated/98 to-scifi-bg-surface/95 border-r border-scifi-cyan-dim/40'
+          }`}
           style={{ paddingTop: 20 }}
         >
           {currentPeriod ? (
@@ -579,26 +622,43 @@ function TrackLabel({ track, trackIndex, theme, onEdit }) {
   return (
     <div
       data-testid={`track-label-${track.id}`}
-      className={`flex items-center gap-2 px-3 py-2 group cursor-pointer transition-all ${theme === 'fantasy' ? 'hover:bg-fantasy-bg-secondary/50' : 'hover:bg-scifi-accent/5'}`}
+      className={`flex items-center gap-3 px-4 py-3 group cursor-pointer transition-all ${
+        theme === 'fantasy' 
+          ? 'hover:bg-fantasy-gold/10 border-l-4 border-transparent hover:border-fantasy-gold' 
+          : 'hover:bg-scifi-cyan/5 border-l-2 border-transparent hover:border-scifi-cyan'
+      }`}
       style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 20 }}
       onClick={() => onEdit(track)}
       title="Click to edit track"
     >
       <div
-        className="w-4 h-4 rounded-sm flex-shrink-0"
-        style={{ backgroundColor: track.color }}
+        className={`w-4 h-4 flex-shrink-0 ${theme === 'fantasy' ? 'rounded-sm shadow-sm' : 'rotate-45'}`}
+        style={{ 
+          backgroundColor: track.color,
+          boxShadow: theme === 'scifi' ? `0 0 8px ${track.color}` : undefined
+        }}
       />
       <div className="flex flex-col min-w-0 flex-1">
-        <span className={`text-sm font-bold truncate ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'}`}>
+        <span className={`text-sm font-bold truncate ${
+          theme === 'fantasy' 
+            ? 'font-fantasy-heading text-fantasy-text' 
+            : 'font-scifi-heading text-scifi-text uppercase tracking-wider text-xs'
+        }`}>
           {track.name}
         </span>
-        <span className={`text-xs truncate ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+        <span className={`text-xs truncate ${
+          theme === 'fantasy' 
+            ? 'text-fantasy-muted italic font-fantasy-body' 
+            : 'text-scifi-text-dim font-scifi-mono'
+        }`}>
           {track.calendarName}
         </span>
       </div>
       <Pencil 
         size={14} 
-        className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`} 
+        className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${
+          theme === 'fantasy' ? 'text-fantasy-gold' : 'text-scifi-cyan'
+        }`} 
       />
     </div>
   );

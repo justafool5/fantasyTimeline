@@ -40,10 +40,10 @@ export default function AddTrackForm({ onClose }) {
   };
 
   const inputClass = theme === 'fantasy'
-    ? 'bg-fantasy-bg border border-fantasy-border/60 text-fantasy-text font-fantasy-body px-3 py-2 w-full focus:outline-none focus:border-fantasy-accent'
-    : 'bg-scifi-bg border border-scifi-border text-scifi-text font-scifi-body px-3 py-2 w-full focus:outline-none focus:border-scifi-accent';
+    ? 'bg-fantasy-bg-card border-2 border-fantasy-border text-fantasy-text font-fantasy-body px-3 py-2.5 w-full focus:outline-none focus:border-fantasy-gold transition-colors'
+    : 'bg-scifi-bg border border-scifi-cyan-dim text-scifi-text font-scifi-body px-3 py-2.5 w-full focus:outline-none focus:border-scifi-cyan focus:shadow-scifi-glow transition-all';
 
-  const labelClass = `block mb-1 text-xs font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-muted font-scifi-heading'}`;
+  const labelClass = `block mb-1.5 text-xs font-bold uppercase tracking-wider ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-cyan-dim font-scifi-heading'}`;
 
   return (
     <motion.div
@@ -52,7 +52,7 @@ export default function AddTrackForm({ onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(10,8,4,0.7)' : 'rgba(0,0,0,0.8)' }}
+      style={{ backgroundColor: theme === 'fantasy' ? 'rgba(42, 24, 16, 0.85)' : 'rgba(3, 3, 8, 0.9)' }}
       onClick={onClose}
     >
       <motion.form
@@ -65,16 +65,16 @@ export default function AddTrackForm({ onClose }) {
         className={`
           w-full max-w-md max-h-[85vh] overflow-y-auto p-6
           ${theme === 'fantasy'
-            ? 'bg-fantasy-card border border-fantasy-border shadow-[0_4px_40px_rgba(0,0,0,0.7)]'
-            : 'bg-scifi-bg-secondary border border-scifi-border shadow-[0_0_30px_rgba(0,243,255,0.1)] backdrop-blur-md'
+            ? 'bg-gradient-to-b from-fantasy-bg-card to-fantasy-bg-dark border-2 border-fantasy-border shadow-fantasy-lg'
+            : 'bg-gradient-to-b from-scifi-bg-elevated to-scifi-bg-surface border border-scifi-cyan-dim shadow-scifi-lg'
           }
         `}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className={`text-xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-accent' : 'font-scifi-heading text-scifi-accent text-base'}`}>
+          <h3 className={`text-xl font-bold ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-cyan uppercase tracking-wider text-base'}`}>
             Add New Track
           </h3>
-          <button type="button" onClick={onClose} data-testid="close-add-track" className={`p-1 ${theme === 'fantasy' ? 'text-fantasy-muted hover:text-fantasy-text' : 'text-scifi-muted hover:text-scifi-accent'}`}>
+          <button type="button" onClick={onClose} data-testid="close-add-track" className={`p-1.5 transition-colors ${theme === 'fantasy' ? 'text-fantasy-muted hover:text-fantasy-gold' : 'text-scifi-text-dim hover:text-scifi-cyan'}`}>
             <X size={18} />
           </button>
         </div>
@@ -185,18 +185,18 @@ export default function AddTrackForm({ onClose }) {
         </div>
 
         {/* Preview */}
-        <div className={`mb-6 p-3 ${theme === 'fantasy' ? 'bg-fantasy-bg/50 border border-fantasy-border/30' : 'bg-scifi-bg/50 border border-scifi-border/30'}`}>
-          <p className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>Preview:</p>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: form.color }} />
-            <span className={`text-sm font-bold ${theme === 'fantasy' ? 'text-fantasy-text' : 'text-scifi-text'}`}>
+        <div className={`mb-6 p-4 ${theme === 'fantasy' ? 'bg-fantasy-bg-dark/50 border-2 border-fantasy-border/40' : 'bg-scifi-bg/50 border border-scifi-cyan-dim/30'}`}>
+          <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-heading' : 'text-scifi-cyan-dim font-scifi-heading'}`}>Preview:</p>
+          <div className="flex items-center gap-3 mt-1">
+            <div className={`w-4 h-4 ${theme === 'fantasy' ? 'rounded-sm' : 'rotate-45'}`} style={{ backgroundColor: form.color, boxShadow: theme === 'scifi' ? `0 0 8px ${form.color}` : 'none' }} />
+            <span className={`text-sm font-bold ${theme === 'fantasy' ? 'text-fantasy-text font-fantasy-heading' : 'text-scifi-text font-scifi-heading uppercase tracking-wider text-xs'}`}>
               {form.name || 'Track Name'}
             </span>
-            <span className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
+            <span className={`text-xs ${theme === 'fantasy' ? 'text-fantasy-muted font-fantasy-body italic' : 'text-scifi-text-dim font-scifi-mono'}`}>
               ({form.calendarName || 'Calendar'})
             </span>
           </div>
-          <p className={`text-xs mt-2 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+          <p className={`text-xs mt-3 ${theme === 'fantasy' ? 'text-fantasy-muted/70' : 'text-scifi-text-dim'}`}>
             Range: {form.startYear} {form.abbr || 'YR'} to {form.endYear} {form.abbr || 'YR'}
           </p>
         </div>
@@ -207,8 +207,8 @@ export default function AddTrackForm({ onClose }) {
           type="submit"
           className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-bold text-sm transition-all
             ${theme === 'fantasy'
-              ? 'bg-fantasy-accent text-fantasy-bg border border-fantasy-accent font-fantasy-heading hover:bg-yellow-600'
-              : 'bg-scifi-accent text-scifi-bg border border-scifi-accent font-scifi-heading hover:bg-cyan-300'
+              ? 'bg-fantasy-gold text-fantasy-bg-dark border-2 border-fantasy-gold font-fantasy-heading hover:bg-fantasy-accent-light shadow-fantasy-glow'
+              : 'bg-scifi-cyan/20 text-scifi-cyan border border-scifi-cyan font-scifi-heading uppercase tracking-wider hover:bg-scifi-cyan/30 hover:shadow-scifi-glow'
             }`}
         >
           <Plus size={16} />
