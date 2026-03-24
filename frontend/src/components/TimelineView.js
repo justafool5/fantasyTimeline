@@ -19,7 +19,7 @@ import AddTrackForm from './AddTrackForm';
 import EditTrackForm from './EditTrackForm';
 import EditTimelineForm from './EditTimelineForm';
 import EditTagDefinitionsForm from './EditTagDefinitionsForm';
-import { Plus, ArrowLeft, Settings, Pencil, X } from 'lucide-react';
+import { Plus, ArrowLeft, Settings, Pencil, X, Download, ChevronDown, Globe } from 'lucide-react';
 
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
@@ -36,6 +36,177 @@ const STACK_DETAILS_WIDTH = 320;
 const MIN_LABEL_WIDTH = 80;
 const TARGET_LABEL_LINE_LENGTH = 22;
 const ESTIMATED_CHAR_WIDTH = 6.5;
+const CROSS_TRACK_LABELS_HEIGHT = 50;
+
+// Tools Menu Component (consolidated settings, export, etc.)
+function ToolsMenu({ theme, onEditTimeline, onDownloadJSON }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        data-testid="tools-menu-btn"
+        data-interactive="true"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all ${
+          theme === 'fantasy' 
+            ? 'bg-fantasy-bg-card text-fantasy-text-light border-2 border-fantasy-border hover:border-fantasy-gold hover:text-fantasy-gold font-fantasy-heading shadow-sm' 
+            : 'bg-scifi-bg-surface text-scifi-text-dim border border-scifi-cyan-dim hover:border-scifi-cyan hover:text-scifi-cyan hover:shadow-scifi-glow font-scifi-heading uppercase tracking-wider'
+        }`}
+      >
+        <Settings size={14} />
+        <span>Tools</span>
+        <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className={`absolute top-full right-0 mt-2 min-w-[180px] z-50 ${
+          theme === 'fantasy'
+            ? 'bg-fantasy-bg-card border-2 border-fantasy-border shadow-fantasy-lg'
+            : 'bg-scifi-bg-elevated border border-scifi-cyan-dim shadow-scifi-lg'
+        }`}>
+          <button
+            data-testid="edit-timeline-btn"
+            onClick={() => { onEditTimeline(); setIsOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-left text-xs font-bold transition-all ${
+              theme === 'fantasy'
+                ? 'text-fantasy-text hover:bg-fantasy-gold/10 hover:text-fantasy-gold font-fantasy-heading border-b border-fantasy-border/40'
+                : 'text-scifi-text hover:bg-scifi-cyan/10 hover:text-scifi-cyan font-scifi-heading uppercase tracking-wider border-b border-scifi-cyan-dim/30'
+            }`}
+          >
+            <Settings size={14} />
+            Timeline Settings
+          </button>
+          <button
+            data-testid="json-download-btn"
+            onClick={() => { onDownloadJSON(); setIsOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-left text-xs font-bold transition-all ${
+              theme === 'fantasy'
+                ? 'text-fantasy-text hover:bg-fantasy-gold/10 hover:text-fantasy-gold font-fantasy-heading'
+                : 'text-scifi-text hover:bg-scifi-cyan/10 hover:text-scifi-cyan font-scifi-heading uppercase tracking-wider'
+            }`}
+          >
+            <Download size={14} />
+            Export JSON
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Cross-track events dedicated label row (fixed between header and timeline)
+function CrossTrackLabelsRow({ 
+  events, 
+  masterRange, 
+  pixelsPerYear, 
+  totalWidth, 
+  expandedEvent, 
+  setExpandedEvent, 
+  theme,
+  scrollRef
+}) {
+  const rowRef = useRef(null);
+  const crossTrackColor = theme === 'fantasy' ? '#8a0303' : '#ff00ff';
+  
+  // Sync scroll with main timeline
+  useEffect(() => {
+    const handleScroll = () => {
+      if (rowRef.current && scrollRef.current) {
+        rowRef.current.scrollLeft = scrollRef.current.scrollLeft;
+      }
+    };
+    const mainScroll = scrollRef.current;
+    if (mainScroll) {
+      mainScroll.addEventListener('scroll', handleScroll);
+    }
+    return () => {
+      if (mainScroll) {
+        mainScroll.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [scrollRef]);
+
+  return (
+    <div className={`flex-shrink-0 flex border-b ${
+      theme === 'fantasy'
+        ? 'bg-fantasy-bg-dark/60 border-fantasy-border/40'
+        : 'bg-scifi-bg-surface/60 border-scifi-cyan-dim/30'
+    }`} style={{ height: CROSS_TRACK_LABELS_HEIGHT }}>
+      {/* Fixed sidebar space */}
+      <div className={`flex-shrink-0 w-52 flex items-center px-4 border-r ${
+        theme === 'fantasy'
+          ? 'bg-fantasy-bg-dark/80 border-fantasy-border/40'
+          : 'bg-scifi-bg-elevated/80 border-scifi-cyan-dim/30'
+      }`}>
+        <div className="flex items-center gap-2">
+          <Globe size={14} className={theme === 'fantasy' ? 'text-fantasy-crimson' : 'text-scifi-magenta'} />
+          <span className={`text-xs font-bold ${
+            theme === 'fantasy'
+              ? 'font-fantasy-heading text-fantasy-muted'
+              : 'font-scifi-heading text-scifi-text-dim uppercase tracking-wider'
+          }`}>
+            Cross-Track
+          </span>
+        </div>
+      </div>
+      
+      {/* Scrollable labels area */}
+      <div 
+        ref={rowRef}
+        className="flex-1 overflow-x-hidden relative"
+      >
+        <div 
+          className="relative h-full"
+          style={{ width: totalWidth + TRACK_CONTENT_START + TIMELINE_PADDING }}
+        >
+          {events.map(evt => {
+            const isPeriod = evt.type === 'period';
+            const masterYear = isPeriod ? evt.masterStartDate.year : evt.masterDate.year;
+            const x = TRACK_CONTENT_START + (masterYear - masterRange.start) * pixelsPerYear;
+            const isExpanded = expandedEvent === evt.id;
+            
+            return (
+              <button
+                key={evt.id}
+                data-testid={`cross-track-label-${evt.id}`}
+                onClick={() => setExpandedEvent(isExpanded ? null : evt.id)}
+                className={`absolute top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold text-center transition-all cursor-pointer ${
+                  theme === 'fantasy' 
+                    ? 'font-fantasy-heading bg-fantasy-bg-card border-2 hover:border-fantasy-crimson' 
+                    : 'font-scifi-heading bg-scifi-bg-elevated border hover:border-scifi-magenta hover:shadow-scifi-glow'
+                } ${isExpanded ? 'ring-2' : ''}`}
+                style={{ 
+                  left: x, 
+                  transform: 'translate(-50%, -50%)',
+                  color: crossTrackColor,
+                  borderColor: isExpanded ? crossTrackColor : (theme === 'fantasy' ? '#8b7355' : '#007a8a'),
+                  ringColor: crossTrackColor,
+                  maxWidth: 160,
+                }}
+              >
+                {evt.title}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function splitTitleLines(title) {
   const normalized = (title || '').trim();
@@ -88,6 +259,7 @@ export default function TimelineView() {
     expandedEvent,
     setExpandedEvent,
     scrollRef,
+    downloadFullTimelineJSON,
   } = useTimeline();
   const { theme } = useTheme();
 
@@ -375,19 +547,13 @@ export default function TimelineView() {
           })()}
           
           {!currentPeriod && (
-            <div className="flex items-center gap-3">
-              <button
-                data-testid="edit-timeline-btn"
-                data-interactive="true"
-                onClick={() => setShowEditTimeline(true)}
-                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all ${
-                  theme === 'fantasy' 
-                    ? 'bg-fantasy-bg-card text-fantasy-text-light border-2 border-fantasy-border hover:border-fantasy-gold hover:text-fantasy-gold font-fantasy-heading shadow-sm' 
-                    : 'bg-scifi-bg-surface text-scifi-text-dim border border-scifi-cyan-dim hover:border-scifi-cyan hover:text-scifi-cyan hover:shadow-scifi-glow font-scifi-heading uppercase tracking-wider'
-                }`}
-              >
-                <Settings size={14} />
-              </button>
+            <div className="flex items-center gap-2">
+              {/* Tools Menu */}
+              <ToolsMenu 
+                theme={theme} 
+                onEditTimeline={() => setShowEditTimeline(true)}
+                onDownloadJSON={downloadFullTimelineJSON}
+              />
               <button
                 data-testid="add-track-btn"
                 data-interactive="true"
@@ -404,6 +570,20 @@ export default function TimelineView() {
           )}
         </div>
       </div>
+
+      {/* Cross-track events dedicated label row - always visible */}
+      {!currentPeriod && displayCrossTrackEvents.length > 0 && (
+        <CrossTrackLabelsRow
+          events={displayCrossTrackEvents}
+          masterRange={effectiveMasterRange}
+          pixelsPerYear={pixelsPerYear}
+          totalWidth={totalWidth}
+          expandedEvent={expandedEvent}
+          setExpandedEvent={setExpandedEvent}
+          theme={theme}
+          scrollRef={scrollRef}
+        />
+      )}
 
       {/* Main content area with fixed sidebar and scrollable timeline */}
       <div className="flex-1 flex overflow-hidden relative" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
@@ -1304,7 +1484,7 @@ function StackClusterDetailsPanel({
   );
 }
 
-// Cross-track event component (vertical line/band spanning all tracks)
+// Cross-track event component (vertical line/band spanning all tracks - no label, labels are in dedicated row)
 function CrossTrackEvent({
   event,
   tracks,
@@ -1318,7 +1498,6 @@ function CrossTrackEvent({
   const isPeriod = event.type === 'period';
   const masterYear = isPeriod ? event.masterStartDate.year : event.masterDate.year;
   const x = TRACK_CONTENT_START + (masterYear - masterRange.start) * pixelsPerYear;
-  const displayTitle = event.title || '';
   
   let width = 4;
   if (isPeriod) {
@@ -1338,10 +1517,10 @@ function CrossTrackEvent({
       className="absolute cursor-pointer transition-all group"
       style={{
         left: x,
-        top: 40,
+        top: 20,
         width: isPeriod ? width : 3,
-        height: totalHeight - 20,
-        zIndex: isExpanded ? 25 : 2, // Lower z-index to avoid blocking track events
+        height: totalHeight,
+        zIndex: isExpanded ? 25 : 2,
         pointerEvents: 'auto',
       }}
       onClick={(e) => {
@@ -1359,19 +1538,6 @@ function CrossTrackEvent({
           boxShadow: theme === 'scifi' ? `0 0 10px ${crossTrackColor}` : 'none',
         }}
       />
-
-      {/* Label */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 transition-all pointer-events-auto"
-        style={{ top: -25, width: EVENT_LABEL_WIDTH, maxWidth: EVENT_LABEL_WIDTH }}
-      >
-        <div
-          className={`px-2 py-1 text-[10px] font-bold text-center whitespace-normal break-words ${theme === 'fantasy' ? 'font-fantasy-heading bg-fantasy-card border border-fantasy-border' : 'font-scifi-heading bg-scifi-bg-secondary border border-scifi-border'}`}
-          style={{ color: crossTrackColor }}
-        >
-          {displayTitle}
-        </div>
-      </div>
     </div>
   );
 }

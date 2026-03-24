@@ -5,7 +5,6 @@ import { useTheme } from './contexts/ThemeContext';
 import ThemeSwitcher from './components/ThemeSwitcher';
 import TimelinePicker from './components/TimelinePicker';
 import ZoomControls from './components/ZoomControls';
-import JsonDownloadButton from './components/JsonDownloadButton';
 import TimelineView from './components/TimelineView';
 import { Loader2 } from 'lucide-react';
 
@@ -42,7 +41,6 @@ function AppContent() {
       <ThemeSwitcher />
       <TimelinePicker />
       <ZoomControls />
-      <JsonDownloadButton />
       <TimelineView />
     </>
   );
