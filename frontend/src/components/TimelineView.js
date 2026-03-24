@@ -37,6 +37,8 @@ const MIN_LABEL_WIDTH = 80;
 const TARGET_LABEL_LINE_LENGTH = 22;
 const ESTIMATED_CHAR_WIDTH = 6.5;
 const CROSS_TRACK_LABELS_HEIGHT = 50;
+const TRACK_NAME_MAX_LENGTH = 75;
+const CROSS_TRACK_CLUSTER_DISTANCE_PX = 100;
 
 // Tools Menu Component (consolidated settings, export, etc.)
 function ToolsMenu({ theme, onEditTimeline, onDownloadJSON }) {
@@ -121,6 +123,7 @@ function CrossTrackLabelsRow({
 }) {
   const rowRef = useRef(null);
   const crossTrackColor = theme === 'fantasy' ? '#8a0303' : '#ff00ff';
+  const [expandedCluster, setExpandedCluster] = useState(null);
   
   // Sync scroll with main timeline
   useEffect(() => {
@@ -139,6 +142,46 @@ function CrossTrackLabelsRow({
       }
     };
   }, [scrollRef]);
+
+  // Compute positions and cluster events
+  const clusteredLabels = useMemo(() => {
+    if (!events.length) return [];
+    
+    // Calculate x positions for all events
+    const positionedEvents = events.map(evt => {
+      const isPeriod = evt.type === 'period';
+      const masterYear = isPeriod ? evt.masterStartDate.year : evt.masterDate.year;
+      const x = TRACK_CONTENT_START + (masterYear - masterRange.start) * pixelsPerYear;
+      return { ...evt, x };
+    }).sort((a, b) => a.x - b.x);
+
+    // Cluster events that are too close together
+    const clusters = [];
+    let currentCluster = [positionedEvents[0]];
+
+    for (let i = 1; i < positionedEvents.length; i++) {
+      const evt = positionedEvents[i];
+      const prevEvt = currentCluster[currentCluster.length - 1];
+      
+      if (evt.x - prevEvt.x < CROSS_TRACK_CLUSTER_DISTANCE_PX) {
+        currentCluster.push(evt);
+      } else {
+        clusters.push(currentCluster);
+        currentCluster = [evt];
+      }
+    }
+    clusters.push(currentCluster);
+
+    return clusters.map(cluster => {
+      const centerX = cluster.reduce((sum, evt) => sum + evt.x, 0) / cluster.length;
+      return {
+        events: cluster,
+        centerX,
+        isClustered: cluster.length > 1,
+        clusterKey: cluster.map(e => e.id).join('::'),
+      };
+    });
+  }, [events, masterRange, pixelsPerYear]);
 
   return (
     <div className={`flex-shrink-0 flex border-b ${
@@ -173,35 +216,82 @@ function CrossTrackLabelsRow({
           className="relative h-full"
           style={{ width: totalWidth + TRACK_CONTENT_START + TIMELINE_PADDING }}
         >
-          {events.map(evt => {
-            const isPeriod = evt.type === 'period';
-            const masterYear = isPeriod ? evt.masterStartDate.year : evt.masterDate.year;
-            const x = TRACK_CONTENT_START + (masterYear - masterRange.start) * pixelsPerYear;
-            const isExpanded = expandedEvent === evt.id;
+          {clusteredLabels.map((cluster, idx) => {
+            const isExpanded = expandedCluster === cluster.clusterKey;
             
-            return (
-              <button
-                key={evt.id}
-                data-testid={`cross-track-label-${evt.id}`}
-                onClick={() => setExpandedEvent(isExpanded ? null : evt.id)}
-                className={`absolute top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold text-center transition-all cursor-pointer ${
-                  theme === 'fantasy' 
-                    ? 'font-fantasy-heading bg-fantasy-bg-card border-2 hover:border-fantasy-crimson' 
-                    : 'font-scifi-heading bg-scifi-bg-elevated border hover:border-scifi-magenta hover:shadow-scifi-glow'
-                } ${isExpanded ? 'ring-2' : ''}`}
-                style={{ 
-                  left: x, 
-                  transform: 'translate(-50%, -50%)',
-                  color: crossTrackColor,
-                  borderColor: isExpanded ? crossTrackColor : (theme === 'fantasy' ? '#8b7355' : '#007a8a'),
-                  ringColor: crossTrackColor,
-                  maxWidth: 160,
-                }}
-              >
-                {evt.title}
-              </button>
-            );
+            if (cluster.isClustered && !isExpanded) {
+              // Render cluster bubble
+              return (
+                <button
+                  key={`cluster-${idx}`}
+                  data-testid={`cross-track-cluster-${idx}`}
+                  onClick={() => setExpandedCluster(isExpanded ? null : cluster.clusterKey)}
+                  className={`absolute top-1/2 -translate-y-1/2 px-3 py-1.5 text-[10px] font-bold text-center transition-all cursor-pointer ${
+                    theme === 'fantasy' 
+                      ? 'font-fantasy-heading bg-fantasy-bg-card border-2 border-fantasy-crimson hover:bg-fantasy-crimson/10' 
+                      : 'font-scifi-heading bg-scifi-bg-elevated border border-scifi-magenta hover:bg-scifi-magenta/20 hover:shadow-scifi-glow'
+                  }`}
+                  style={{ 
+                    left: cluster.centerX, 
+                    transform: 'translate(-50%, -50%)',
+                    color: crossTrackColor,
+                  }}
+                >
+                  {cluster.events.length} events
+                </button>
+              );
+            }
+            
+            // Render individual labels (or expanded cluster)
+            return cluster.events.map((evt, evtIdx) => {
+              const isEventExpanded = expandedEvent === evt.id;
+              
+              return (
+                <button
+                  key={evt.id}
+                  data-testid={`cross-track-label-${evt.id}`}
+                  onClick={() => {
+                    if (cluster.isClustered && isExpanded) {
+                      setExpandedEvent(isEventExpanded ? null : evt.id);
+                    } else {
+                      setExpandedEvent(isEventExpanded ? null : evt.id);
+                    }
+                  }}
+                  className={`absolute top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold text-center transition-all cursor-pointer ${
+                    theme === 'fantasy' 
+                      ? 'font-fantasy-heading bg-fantasy-bg-card border-2 hover:border-fantasy-crimson' 
+                      : 'font-scifi-heading bg-scifi-bg-elevated border hover:border-scifi-magenta hover:shadow-scifi-glow'
+                  } ${isEventExpanded ? 'ring-2' : ''}`}
+                  style={{ 
+                    left: cluster.isClustered ? cluster.centerX + (evtIdx - (cluster.events.length - 1) / 2) * 80 : evt.x, 
+                    transform: 'translate(-50%, -50%)',
+                    color: crossTrackColor,
+                    borderColor: isEventExpanded ? crossTrackColor : (theme === 'fantasy' ? '#8b7355' : '#007a8a'),
+                    ringColor: crossTrackColor,
+                    maxWidth: 140,
+                    zIndex: cluster.isClustered ? 10 : 1,
+                  }}
+                >
+                  <span className="line-clamp-1">{evt.title}</span>
+                </button>
+              );
+            });
           })}
+          
+          {/* Collapse button when cluster is expanded */}
+          {expandedCluster && (
+            <button
+              onClick={() => setExpandedCluster(null)}
+              className={`absolute top-1 right-4 px-2 py-0.5 text-[9px] font-bold transition-all ${
+                theme === 'fantasy'
+                  ? 'bg-fantasy-border text-fantasy-bg-card hover:bg-fantasy-gold'
+                  : 'bg-scifi-cyan-dim text-scifi-bg hover:bg-scifi-cyan'
+              }`}
+              style={{ zIndex: 20 }}
+            >
+              Collapse
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -275,6 +365,47 @@ export default function TimelineView() {
   const scrollTimeoutRef = useRef(null);
   const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
   const timelineAreaRef = useRef(null);
+  const sidebarRef = useRef(null);
+  
+  // Sync vertical scrolling between sidebar and timeline
+  useEffect(() => {
+    const syncScroll = (source, target) => {
+      if (target) {
+        target.scrollTop = source.scrollTop;
+      }
+    };
+    
+    const handleTimelineScroll = () => {
+      if (scrollRef.current && sidebarRef.current) {
+        syncScroll(scrollRef.current, sidebarRef.current);
+      }
+    };
+    
+    const handleSidebarScroll = () => {
+      if (sidebarRef.current && scrollRef.current) {
+        syncScroll(sidebarRef.current, scrollRef.current);
+      }
+    };
+    
+    const timeline = scrollRef.current;
+    const sidebar = sidebarRef.current;
+    
+    if (timeline) {
+      timeline.addEventListener('scroll', handleTimelineScroll);
+    }
+    if (sidebar) {
+      sidebar.addEventListener('scroll', handleSidebarScroll);
+    }
+    
+    return () => {
+      if (timeline) {
+        timeline.removeEventListener('scroll', handleTimelineScroll);
+      }
+      if (sidebar) {
+        sidebar.removeEventListener('scroll', handleSidebarScroll);
+      }
+    };
+  }, [scrollRef]);
   
   // Navigation stack for drilling into periods
   const [navStack, setNavStack] = useState([]); // [{ periodEventId, parentTrackId }]
@@ -589,7 +720,8 @@ export default function TimelineView() {
       <div className="flex-1 flex overflow-hidden relative" onMouseDownCapture={handleMainTimelineMouseDownCapture}>
         {/* Fixed left sidebar with track names */}
         <div 
-          className={`flex-shrink-0 w-52 overflow-y-auto relative z-10 ${
+          ref={sidebarRef}
+          className={`flex-shrink-0 w-52 overflow-y-auto overflow-x-hidden relative z-10 sidebar-scroll ${
             theme === 'fantasy' 
               ? 'bg-gradient-to-r from-fantasy-bg-dark/95 to-fantasy-bg-dark/80 border-r-2 border-fantasy-border/60 shadow-lg' 
               : 'bg-gradient-to-r from-scifi-bg-elevated/98 to-scifi-bg-surface/95 border-r border-scifi-cyan-dim/40'
@@ -799,34 +931,64 @@ export default function TimelineView() {
 
 // Track label component for the fixed sidebar
 function TrackLabel({ track, trackIndex, theme, onEdit }) {
+  // Split long track names into multiple lines (word-wrap aware)
+  const nameLines = useMemo(() => {
+    const name = track.name || '';
+    if (name.length <= 18) return [name];
+    
+    // Try to split at word boundaries
+    const words = name.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    for (const word of words) {
+      if (currentLine.length + word.length + 1 <= 18) {
+        currentLine = currentLine ? `${currentLine} ${word}` : word;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    
+    // Limit to 3 lines max, add ellipsis if needed
+    if (lines.length > 3) {
+      lines[2] = lines[2] + '...';
+      return lines.slice(0, 3);
+    }
+    return lines;
+  }, [track.name]);
+
   return (
     <div
       data-testid={`track-label-${track.id}`}
-      className={`flex items-center gap-3 px-4 py-3 group cursor-pointer transition-all ${
+      className={`flex items-start gap-2 px-3 py-2 group cursor-pointer transition-all ${
         theme === 'fantasy' 
           ? 'hover:bg-fantasy-gold/10 border-l-4 border-transparent hover:border-fantasy-gold' 
           : 'hover:bg-scifi-cyan/5 border-l-2 border-transparent hover:border-scifi-cyan'
       }`}
-      style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 20 }}
+      style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 25 }}
       onClick={() => onEdit(track)}
-      title="Click to edit track"
+      title={`${track.name} - Click to edit track`}
     >
       <div
-        className={`w-4 h-4 flex-shrink-0 ${theme === 'fantasy' ? 'rounded-sm shadow-sm' : 'rotate-45'}`}
+        className={`w-3 h-3 flex-shrink-0 mt-1.5 ${theme === 'fantasy' ? 'rounded-sm shadow-sm' : 'rotate-45'}`}
         style={{ 
           backgroundColor: track.color,
           boxShadow: theme === 'scifi' ? `0 0 8px ${track.color}` : undefined
         }}
       />
       <div className="flex flex-col min-w-0 flex-1">
-        <span className={`text-sm font-bold truncate ${
+        <div className={`font-bold leading-snug ${
           theme === 'fantasy' 
-            ? 'font-fantasy-heading text-fantasy-text' 
-            : 'font-scifi-heading text-scifi-text uppercase tracking-wider text-xs'
+            ? 'font-fantasy-heading text-fantasy-text text-[13px]' 
+            : 'font-scifi-heading text-scifi-text uppercase tracking-wide text-[10px]'
         }`}>
-          {track.name}
-        </span>
-        <span className={`text-xs truncate ${
+          {nameLines.map((line, idx) => (
+            <div key={idx}>{line}</div>
+          ))}
+        </div>
+        <span className={`text-[10px] mt-0.5 ${
           theme === 'fantasy' 
             ? 'text-fantasy-muted italic font-fantasy-body' 
             : 'text-scifi-text-dim font-scifi-mono'
@@ -835,8 +997,8 @@ function TrackLabel({ track, trackIndex, theme, onEdit }) {
         </span>
       </div>
       <Pencil 
-        size={14} 
-        className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${
+        size={12} 
+        className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1.5 ${
           theme === 'fantasy' ? 'text-fantasy-gold' : 'text-scifi-cyan'
         }`} 
       />

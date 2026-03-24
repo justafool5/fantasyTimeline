@@ -23,6 +23,16 @@
   box-shadow: 0 0 10px var(--period-color), inset 0 0 5px rgba(0, 229, 255, 0.1);
 }
 
+/* Hide scrollbar for sidebar (synced with timeline) */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0;
+  display: none;
+}
+.sidebar-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Fantasy scrollbar track hover */
 .theme-fantasy .timeline-scroll:hover::-webkit-scrollbar-thumb {
   background: linear-gradient(to bottom, #a08060, #705030, #a08060);

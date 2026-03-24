@@ -87,16 +87,20 @@ export default function EditTrackForm({ track, onClose }) {
 
         {/* Name */}
         <div className="mb-4">
-          <label className={labelClass}>Name *</label>
+          <label className={labelClass}>Name * <span className="font-normal opacity-60">(max 75 chars)</span></label>
           <input
             data-testid="edit-track-name-input"
             type="text"
             value={form.name}
-            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value.slice(0, 75) }))}
             className={inputClass}
             placeholder="e.g., Dwarven Kingdoms"
+            maxLength={75}
             required
           />
+          <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-text-dim'}`}>
+            {form.name.length}/75 characters
+          </p>
         </div>
 
         {/* Calendar Name */}
