@@ -1404,9 +1404,8 @@ function TrackRow({
               <div
                 className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
                 style={{
-                  ...(evt.above ? { top: 10 } : { bottom: 10 }),
-                  width: evt.labelWidth,
-                  maxWidth: EVENT_LABEL_WIDTH,
+                  ...(evt.above ? { top: 20 } : { bottom: 20 }),
+                  width: EVENT_LABEL_WIDTH,
                 }}
               >
                 <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-full">
