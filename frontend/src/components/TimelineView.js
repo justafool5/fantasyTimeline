@@ -1360,8 +1360,8 @@ function TrackRow({
                 borderLeft: isUndated ? `1px dashed ${track.color}60` : 'none',
                 width: isUndated ? 0 : 1,
                 ...(evt.above
-                  ? { bottom: 0, height: evt.hasImage ? 90 : 50 }
-                  : { top: 0, height: evt.hasImage ? 90 : 50 }
+                  ? { bottom: 0, height: 75 }
+                  : { top: 0, height: 75 }
                 ),
               }}
             />
@@ -1402,7 +1402,7 @@ function TrackRow({
             <div
               className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
               style={{
-                ...(evt.above ? { bottom: 16, marginBottom: evt.hasImage ? 78 : 38 } : { top: 16, marginTop: evt.hasImage ? 78 : 38 }),
+                ...(evt.above ? { bottom: 16, marginBottom: 57 } : { top: 16, marginTop: 57 }),
                 width: showLabel ? evt.labelWidth : MIN_LABEL_WIDTH,
                 maxWidth: EVENT_LABEL_WIDTH,
               }}
@@ -1411,9 +1411,6 @@ function TrackRow({
                 <>
                   {evt.above ? (
                     <>
-                      <div className={`text-[11px] font-medium mb-0.5 ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
-                        {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
-                      </div>
                       {evt.resolvedTags.length > 0 && (
                         <div className="mb-1 flex flex-wrap items-center justify-center gap-1.5 max-w-full">
                           {evt.resolvedTags.slice(0, 3).map(tag => (
@@ -1437,6 +1434,9 @@ function TrackRow({
                         {evt.titleLines.map((line, lineIndex) => (
                           <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
                         ))}
+                      </div>
+                      <div className={`text-[11px] font-medium mt-0.5 ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
+                        {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
                       </div>
                       {evt.hasImage && (
                         <div
