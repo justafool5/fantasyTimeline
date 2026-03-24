@@ -1457,6 +1457,9 @@ function TrackRow({
                           <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
                         </div>
                       )}
+                      <div className={`text-[11px] font-medium mb-0.5 ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
+                        {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
+                      </div>
                       <div className={`text-[13px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
                         {evt.titleLines.map((line, lineIndex) => (
                           <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
@@ -1481,9 +1484,6 @@ function TrackRow({
                           )}
                         </div>
                       )}
-                      <div className={`text-[11px] font-medium mt-0.5 ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
-                        {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
-                      </div>
                     </>
                   )}
                 </>
