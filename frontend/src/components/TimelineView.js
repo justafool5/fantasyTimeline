@@ -1399,6 +1399,37 @@ function TrackRow({
               title={isUndated ? `${evt.title} (undated - approximate position)` : evt.title}
             />
 
+            {/* Tags on opposite side of the line from the main label */}
+            {showLabel && evt.resolvedTags.length > 0 && (
+              <div
+                className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
+                style={{
+                  ...(evt.above ? { top: 10 } : { bottom: 10 }),
+                  width: evt.labelWidth,
+                  maxWidth: EVENT_LABEL_WIDTH,
+                }}
+              >
+                <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-full">
+                  {evt.resolvedTags.slice(0, 3).map(tag => (
+                    <span
+                      key={`${evt.id}-opposite-tag-${tag.id}`}
+                      className="px-2 py-0.5 text-[11px] font-bold max-w-full leading-none"
+                      style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
+                      title={tag.label}
+                    >
+                      {tag.label}
+                    </span>
+                  ))}
+                  {evt.resolvedTags.length > 3 && (
+                    <span className={`px-2 py-0.5 text-[11px] font-bold leading-none ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
+                      +{evt.resolvedTags.length - 3} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Main label: image, date, title (tags are on the other side) */}
             <div
               className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
               style={{
@@ -1411,25 +1442,6 @@ function TrackRow({
                 <>
                   {evt.above ? (
                     <>
-                      {evt.resolvedTags.length > 0 && (
-                        <div className="mb-1 flex flex-wrap items-center justify-center gap-1.5 max-w-full">
-                          {evt.resolvedTags.slice(0, 3).map(tag => (
-                            <span
-                              key={`${evt.id}-visible-tag-${tag.id}`}
-                              className="px-2 py-0.5 text-[11px] font-bold max-w-full leading-none"
-                              style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
-                              title={tag.label}
-                            >
-                              {tag.label}
-                            </span>
-                          ))}
-                          {evt.resolvedTags.length > 3 && (
-                            <span className={`px-2 py-0.5 text-[11px] font-bold leading-none ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
-                              +{evt.resolvedTags.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
                       <div className={`text-[13px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
                         {evt.titleLines.map((line, lineIndex) => (
                           <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
@@ -1465,25 +1477,6 @@ function TrackRow({
                           <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
                         ))}
                       </div>
-                      {evt.resolvedTags.length > 0 && (
-                        <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 max-w-full">
-                          {evt.resolvedTags.slice(0, 3).map(tag => (
-                            <span
-                              key={`${evt.id}-visible-tag-${tag.id}`}
-                              className="px-2 py-0.5 text-[11px] font-bold max-w-full leading-none"
-                              style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
-                              title={tag.label}
-                            >
-                              {tag.label}
-                            </span>
-                          ))}
-                          {evt.resolvedTags.length > 3 && (
-                            <span className={`px-2 py-0.5 text-[11px] font-bold leading-none ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
-                              +{evt.resolvedTags.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
                     </>
                   )}
                 </>
