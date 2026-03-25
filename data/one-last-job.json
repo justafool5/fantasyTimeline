@@ -36,7 +36,7 @@
       "type": "undated",
       "title": "Party clears the Whispering Woods",
       "description": "The party clears the Whispering Woods.",
-      "image": null,
+      "image": "https://i.ibb.co/rKCWTTQd/whispering-woods.png",
       "tags": [],
       "trackId": "main-party",
       "placementYear": 4,
@@ -258,6 +258,18 @@
         "year": 0
       },
       "id": "local-1774414462810"
+    },
+    {
+      "type": "undated",
+      "title": "Phinara Oakleaf joins the Kindred Bound",
+      "description": "Marlaina left the Kindred shortly after Westfall. Three is company, but the party needed a dedicated magic user, and so the druid Phinara Oakleaf was welcomed in the group.",
+      "image": null,
+      "tags": [],
+      "placementYear": 2,
+      "afterEvent": null,
+      "beforeEvent": null,
+      "trackId": "main-party",
+      "id": "local-1774418811376"
     }
   ]
 }
