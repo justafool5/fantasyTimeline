@@ -22,26 +22,14 @@
     {
       "id": "olj-001",
       "type": "point",
-      "title": "The Kindred Bound is founded by Rowena, ",
-      "description": "While working at the local inn, Rowena followed a trail of clues that led to a series of hidden coastal caves. She met Daniel investigating the same trail, and Marlaina joined them when she realized the kidnapper was using dark magic that was sickening the local flora.\n\nThey discovered the children were being held by a Corrupt Magistrate who was selling them into forced labor. During the rescue, the trio was nearly cornered by the Magistrate’s hired thugs. It was James, who had picked his own locks, who slipped through the shadows to create a distraction, allowing Rowena and Daniel to break the line and Marlaina to entangle the remaining guards.\n\nBy the time the sun rose over Westfall, the children were safe, the Magistrate was in chains, and the four of them realized they didn't have to face the world alone anymore.",
+      "title": "The Kindred Bound is founded",
+      "description": "After their common adventure in Westfall, Rowena, Daniel, Marlaina and James found The Kindred Bound and set on to adventure.",
       "image": "https://i.ibb.co/HTLdS3zS/kindredforms.png",
       "tags": [],
       "trackId": "main-party",
       "date": {
         "year": 0
       }
-    },
-    {
-      "id": "olj-002",
-      "type": "undated",
-      "title": "Shadows of Westfall",
-      "description": "Early milestone from the campaign sketch.",
-      "image": null,
-      "tags": [],
-      "trackId": "main-party",
-      "placementYear": 1,
-      "afterEvent": null,
-      "beforeEvent": null
     },
     {
       "id": "olj-003",
@@ -51,7 +39,7 @@
       "image": null,
       "tags": [],
       "trackId": "main-party",
-      "placementYear": 3,
+      "placementYear": 4,
       "afterEvent": null,
       "beforeEvent": null
     },
@@ -63,7 +51,7 @@
       "image": null,
       "tags": [],
       "trackId": "main-party",
-      "placementYear": 4,
+      "placementYear": 3,
       "afterEvent": null,
       "beforeEvent": null
     },
@@ -258,6 +246,18 @@
       "placementYear": 33,
       "afterEvent": null,
       "beforeEvent": null
+    },
+    {
+      "type": "point",
+      "title": "Shadows of Westfall",
+      "description": "While working at the local inn, Rowena followed a trail of clues that led to a series of hidden coastal caves. She met Daniel investigating the same trail, and Marlaina joined them when she realized the kidnapper was using dark magic that was sickening the local flora. They discovered the children were being held by a Corrupt Magistrate who was selling them into forced labor. During the rescue, the trio was nearly cornered by the Magistrate’s hired thugs. It was James, who had picked his own locks, who slipped through the shadows to create a distraction, allowing Rowena and Daniel to break the line and Marlaina to entangle the remaining guards. By the time the sun rose over Westfall, the children were safe, the Magistrate was in chains, and the four of them realized they didn't have to face the world alone anymore.",
+      "image": null,
+      "tags": [],
+      "trackId": "main-party",
+      "date": {
+        "year": 0
+      },
+      "id": "local-1774414462810"
     }
   ]
 }
