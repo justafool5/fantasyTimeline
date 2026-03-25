@@ -24,8 +24,8 @@ import { Plus, ArrowLeft, Settings, Pencil, X, Globe } from 'lucide-react';
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
 const TIMELINE_PADDING = 120;
-const TRACK_HEIGHT = 180;
-const AXIS_OFFSET = 100;
+const TRACK_HEIGHT = 200;
+const AXIS_OFFSET = 115;
 const EVENT_LABEL_WIDTH = 240;
 const EVENT_LABEL_GUTTER = 12;
 const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
@@ -1360,8 +1360,8 @@ function TrackRow({
                 borderLeft: isUndated ? `1px dashed ${track.color}60` : 'none',
                 width: isUndated ? 0 : 1,
                 ...(evt.above
-                  ? { bottom: 0, height: evt.hasImage ? 70 : 50 }
-                  : { top: 0, height: evt.hasImage ? 70 : 50 }
+                  ? { bottom: 0, height: 75 }
+                  : { top: 0, height: 75 }
                 ),
               }}
             />
@@ -1399,74 +1399,62 @@ function TrackRow({
               title={isUndated ? `${evt.title} (undated - approximate position)` : evt.title}
             />
 
+            {/* Main label: image, date, title */}
             <div
               className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
               style={{
-                ...(evt.above ? { bottom: 16, marginBottom: evt.hasImage ? 58 : 38 } : { top: 16, marginTop: evt.hasImage ? 58 : 38 }),
+                ...(evt.above ? { bottom: 16, marginBottom: 57 } : { top: 16, marginTop: 57 }),
                 width: showLabel ? evt.labelWidth : MIN_LABEL_WIDTH,
                 maxWidth: EVENT_LABEL_WIDTH,
               }}
             >
               {showLabel ? (
                 <>
-                  {evt.hasImage && (
-                    <div
-                      className={`w-8 h-8 rounded-full overflow-hidden mb-1 ${isUndated ? 'opacity-70' : ''}`}
-                      style={{ border: `2px ${isUndated ? 'dashed' : 'solid'} ${track.color}40` }}
-                    >
-                      <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
-                    </div>
-                  )}
-                  <div className={`text-[13px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
-                    {evt.titleLines.map((line, lineIndex) => (
-                      <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
-                    ))}
-                  </div>
-                  {evt.resolvedTags.length > 0 && (
-                    <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 max-w-full">
-                      {evt.resolvedTags.slice(0, 3).map(tag => (
-                        <span
-                          key={`${evt.id}-visible-tag-${tag.id}`}
-                          className="px-2 py-0.5 text-[11px] font-bold max-w-full leading-none"
-                          style={{ backgroundColor: tag.color, color: getReadableTextColor(tag.color) }}
-                          title={tag.label}
+                  {evt.above ? (
+                    <>
+                      <div className={`text-[13px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
+                        {evt.titleLines.map((line, lineIndex) => (
+                          <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
+                        ))}
+                      </div>
+                      <div className={`text-[11px] font-medium mt-0.5 ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
+                        {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
+                      </div>
+                      {evt.hasImage && (
+                        <div
+                          className={`w-8 h-8 rounded-full overflow-hidden mt-1 ${isUndated ? 'opacity-70' : ''}`}
+                          style={{ border: `2px ${isUndated ? 'dashed' : 'solid'} ${track.color}40` }}
                         >
-                          {tag.label}
-                        </span>
-                      ))}
-                      {evt.resolvedTags.length > 3 && (
-                        <span className={`px-2 py-0.5 text-[11px] font-bold leading-none ${theme === 'fantasy' ? 'bg-fantasy-bg/70 text-fantasy-muted border border-fantasy-border/40' : 'bg-scifi-bg/70 text-scifi-muted border border-scifi-border/40'}`}>
-                          +{evt.resolvedTags.length - 3} more
-                        </span>
+                          <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
                       )}
-                    </div>
+                    </>
+                  ) : (
+                    <>
+                      {evt.hasImage && (
+                        <div
+                          className={`w-8 h-8 rounded-full overflow-hidden mb-1 ${isUndated ? 'opacity-70' : ''}`}
+                          style={{ border: `2px ${isUndated ? 'dashed' : 'solid'} ${track.color}40` }}
+                        >
+                          <img src={evt.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      )}
+                      <div className={`text-[11px] font-medium mb-0.5 ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
+                        {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
+                      </div>
+                      <div className={`text-[13px] font-bold leading-tight text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text' : 'font-scifi-heading text-scifi-text'} ${isUndated ? 'opacity-80 italic' : ''}`}>
+                        {evt.titleLines.map((line, lineIndex) => (
+                          <div key={`${evt.id}-line-${lineIndex}`}>{line}</div>
+                        ))}
+                      </div>
+                    </>
                   )}
-                  <div className={`text-[11px] font-medium mt-0.5 ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-text-light' : 'text-scifi-text-dim'}`}>
-                    {isUndated ? '(undated)' : `${formatYear(evt.year)} ${track.abbr}`}
-                  </div>
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-1">
                   <div className={`text-[13px] font-bold tracking-wide text-center ${theme === 'fantasy' ? 'font-fantasy-heading text-fantasy-muted' : 'font-scifi-heading text-scifi-muted'}`}>
                     ...
                   </div>
-                  {evt.resolvedTags.length > 0 && (
-                    <div className="flex items-center justify-center gap-1">
-                      {evt.resolvedTags.slice(0, 3).map(tag => (
-                        <span
-                          key={`${evt.id}-hidden-tag-dot-${tag.id}`}
-                          className="inline-block h-[6px] min-w-[10px] rounded-[2px]"
-                          style={{ backgroundColor: tag.color }}
-                          title={tag.label}
-                        />
-                      ))}
-                      {evt.resolvedTags.length > 3 && (
-                        <span className={`text-[10px] font-bold ${theme === 'fantasy' ? 'text-fantasy-muted' : 'text-scifi-muted'}`}>
-                          +{evt.resolvedTags.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

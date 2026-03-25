@@ -106,8 +106,8 @@ export default function EditTagDefinitionsForm({ onClose }) {
         className={`
           w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6
           ${theme === 'fantasy'
-            ? 'bg-fantasy-card border border-fantasy-border shadow-[0_4px_40px_rgba(0,0,0,0.7)]'
-            : 'bg-scifi-bg-secondary border border-scifi-border shadow-[0_0_30px_rgba(0,243,255,0.1)] backdrop-blur-md'
+            ? 'bg-gradient-to-b from-fantasy-bg-card to-fantasy-bg-dark border-2 border-fantasy-border shadow-fantasy-lg'
+            : 'bg-gradient-to-b from-scifi-bg-elevated to-scifi-bg-surface border border-scifi-cyan-dim shadow-scifi-lg'
           }
         `}
       >
