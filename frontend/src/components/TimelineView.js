@@ -1159,8 +1159,17 @@ function TrackRow({
       const sortedClusterEvents = [...clusterEvents].sort((a, b) => a.x - b.x);
       const firstX = sortedClusterEvents[0].x;
       const samePosition = sortedClusterEvents.every(evt => Math.abs(evt.x - firstX) <= CLUSTER_STACK_EPSILON_PX);
-      const sameYear = sortedClusterEvents.every(evt => evt.type !== 'undated' && evt.year === sortedClusterEvents[0].year);
-      const stackable = samePosition && sameYear;
+      // Treat undated events as truly co-located when they share the same
+      // _calculatedYear (i.e., same placementYear, or same anchor pair with
+      // zero-width interval). Mixed dated+undated clusters are stackable when
+      // both resolve to the same year.
+      const referenceEvent = sortedClusterEvents[0];
+      const refYear = referenceEvent.type === 'undated' ? referenceEvent._calculatedYear : referenceEvent.year;
+      const sameMoment = refYear !== undefined && refYear !== null && sortedClusterEvents.every(evt => {
+        const myYear = evt.type === 'undated' ? evt._calculatedYear : evt.year;
+        return myYear === refYear;
+      });
+      const stackable = samePosition && sameMoment;
 
       return {
         type: 'cluster',
