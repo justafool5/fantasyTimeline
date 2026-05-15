@@ -32,6 +32,7 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
     // Undated event anchors
     afterEvent: '', // Event ID or empty for track/timeline start
     beforeEvent: '', // Event ID or empty for track/timeline end
+    placementYear: '', // Optional: overrides anchor interpolation for rendering
   });
 
   const selectedTrack = allTracks.find(t => t.id === form.trackId);
@@ -86,7 +87,17 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
       // Undated event with anchor references
       event.afterEvent = form.afterEvent || null; // null means track/timeline start
       event.beforeEvent = form.beforeEvent || null; // null means track/timeline end
-      
+
+      // Optional placementYear overrides anchor interpolation (rendering only).
+      // Trim, parse, and only persist when a finite number was provided.
+      const placementRaw = typeof form.placementYear === 'string' ? form.placementYear.trim() : form.placementYear;
+      if (placementRaw !== '' && placementRaw !== null && placementRaw !== undefined) {
+        const parsedPlacement = Number(placementRaw);
+        if (Number.isFinite(parsedPlacement)) {
+          event.placementYear = parsedPlacement;
+        }
+      }
+
       if (form.isCrossTrack) {
         event.trackId = null;
       } else {
@@ -312,6 +323,22 @@ export default function AddEventForm({ trackId, year, crossTrack, masterYear, pa
             <p className={`text-xs mt-2 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
               The event will appear between these two anchors
             </p>
+            <div className="mt-4">
+              <label className={labelClass}>
+                Placement Year (optional{!form.isCrossTrack && selectedTrack?.abbr ? `, ${selectedTrack.abbr}` : ''})
+              </label>
+              <input
+                data-testid="event-placement-year-input"
+                type="number"
+                value={form.placementYear}
+                onChange={e => setForm(f => ({ ...f, placementYear: e.target.value }))}
+                className={inputClass}
+                placeholder="Leave empty to use anchors"
+              />
+              <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+                Overrides anchor interpolation and pins the event to this exact year on the timeline.
+              </p>
+            </div>
           </div>
         ) : form.isCrossTrack ? (
           // Cross-track: show "reference year" (master) without calling it master
