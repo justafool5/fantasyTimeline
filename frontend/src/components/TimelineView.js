@@ -24,8 +24,8 @@ import { Plus, ArrowLeft, Settings, Pencil, X, Globe } from 'lucide-react';
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
 const TIMELINE_PADDING = 120;
-const TRACK_HEIGHT = 240;
-const AXIS_OFFSET = 135;
+const TRACK_HEIGHT = 270;
+const AXIS_OFFSET = 145;
 const EVENT_LABEL_WIDTH = 240;
 const EVENT_LABEL_GUTTER = 12;
 const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
@@ -1424,8 +1424,8 @@ function TrackRow({
                 borderLeft: isUndated ? `1px dashed ${track.color}60` : 'none',
                 width: isUndated ? 0 : 1,
                 ...(evt.above
-                  ? { bottom: 0, height: 75 }
-                  : { top: 0, height: 75 }
+                  ? { bottom: 0, height: 50 }
+                  : { top: 0, height: 50 }
                 ),
               }}
             />
@@ -1467,7 +1467,7 @@ function TrackRow({
             <div
               className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
               style={{
-                ...(evt.above ? { bottom: 16, marginBottom: 57 } : { top: 16, marginTop: 57 }),
+                ...(evt.above ? { bottom: 16, marginBottom: 38 } : { top: 16, marginTop: 38 }),
                 width: showLabel ? evt.labelWidth : MIN_LABEL_WIDTH,
                 maxWidth: EVENT_LABEL_WIDTH,
               }}
