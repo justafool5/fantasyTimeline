@@ -1438,10 +1438,10 @@ function TrackRow({
               }}
               className={`relative z-20 transition-all duration-200 ${
                 isUndated
-                  ? 'w-5 h-5 rounded-full hover:scale-125'
+                  ? 'w-[21px] h-[21px] rounded-full hover:scale-125'
                   : theme === 'fantasy'
-                    ? 'w-4 h-4 rounded-full border-2 hover:scale-150'
-                    : 'w-4 h-4 rotate-45 border hover:scale-150'
+                    ? 'w-[17px] h-[17px] rounded-full border-2 hover:scale-150'
+                    : 'w-[17px] h-[17px] rotate-45 border hover:scale-150'
               }`}
               style={{
                 backgroundColor: isUndated
@@ -1457,7 +1457,7 @@ function TrackRow({
                   : theme === 'scifi'
                     ? `0 0 8px ${track.color}`
                     : 'none',
-                marginTop: isUndated ? -8 : -6,
+                marginTop: isUndated ? -10.5 : -8.5,
                 transform: isExpanded ? 'scale(1.5)' : undefined,
               }}
               title={isUndated ? `${evt.title} (undated - approximate position)` : evt.title}
