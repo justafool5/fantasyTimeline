@@ -424,7 +424,12 @@ export default function TimelineView() {
   const pixelsPerYear = BASE_PX_PER_YEAR * zoom;
   const totalWidth = (effectiveMasterRange.end - effectiveMasterRange.start) * pixelsPerYear;
 
-  // Zoom via scroll wheel (also track scrolling state)
+  // Keep latest zoom in a ref so the wheel handler can read the current value
+  // without re-binding the listener on every zoom change.
+  const zoomRef = useRef(zoom);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
+  // Zoom via scroll wheel, centered on the mouse pointer (also tracks scrolling state)
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -438,8 +443,32 @@ export default function TimelineView() {
 
       if (e.shiftKey) return;
       e.preventDefault();
-      const delta = e.deltaY > 0 ? 0.92 : 1.08;
-      setZoom(prev => Math.max(prev * delta, MIN_ZOOM));
+
+      const rawDelta = e.deltaY > 0 ? 0.92 : 1.08;
+      const prevZoom = zoomRef.current;
+      const nextZoom = Math.max(prevZoom * rawDelta, MIN_ZOOM);
+      if (nextZoom === prevZoom) return;
+      const actualDelta = nextZoom / prevZoom;
+
+      // Anchor the zoom on the cursor: keep the year currently under the
+      // pointer at the same screen position after the zoom. The track content
+      // starts after a constant TRACK_CONTENT_START offset that does NOT scale
+      // with zoom, so only the year-bearing portion of the content is scaled.
+      const rect = el.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const contentXBefore = el.scrollLeft + mouseX;
+      const yearPartBefore = contentXBefore - TRACK_CONTENT_START;
+      const yearPartAfter = yearPartBefore * actualDelta;
+      const newScrollLeft = TRACK_CONTENT_START + yearPartAfter - mouseX;
+
+      setZoom(nextZoom);
+      // Apply the scroll adjustment after the new pixelsPerYear has been
+      // committed to the DOM so the container has the correct scroll width.
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollLeft = Math.max(0, newScrollLeft);
+        }
+      });
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
