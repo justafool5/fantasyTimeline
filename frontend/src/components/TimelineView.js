@@ -24,8 +24,8 @@ import { Plus, ArrowLeft, Settings, Pencil, X, Globe } from 'lucide-react';
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
 const TIMELINE_PADDING = 120;
-const TRACK_HEIGHT = 200;
-const AXIS_OFFSET = 115;
+const TRACK_HEIGHT = 240;
+const AXIS_OFFSET = 135;
 const EVENT_LABEL_WIDTH = 240;
 const EVENT_LABEL_GUTTER = 12;
 const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
@@ -682,6 +682,7 @@ export default function TimelineView() {
                   key={track.id}
                   track={track}
                   trackIndex={trackIndex}
+                  totalTracks={allTracks.length}
                   theme={theme}
                   onEdit={setEditingTrack}
                 />
@@ -742,6 +743,29 @@ export default function TimelineView() {
               />
             ) : (
               <>
+                {/* Track lane bands: subtle full-width tint per track for visual grouping */}
+                <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  {allTracks.map((track, trackIndex) => {
+                    const bandTop = trackIndex * TRACK_HEIGHT + 20;
+                    const bandBg = theme === 'fantasy' ? `${track.color}0A` : `${track.color}12`;
+                    const dividerColor = theme === 'fantasy' ? `${track.color}33` : `${track.color}40`;
+                    return (
+                      <div
+                        key={`lane-${track.id}`}
+                        data-testid={`track-lane-${track.id}`}
+                        className="absolute left-0 right-0"
+                        style={{
+                          top: bandTop,
+                          height: TRACK_HEIGHT,
+                          backgroundColor: bandBg,
+                          borderTop: trackIndex === 0 ? 'none' : `1px solid ${dividerColor}`,
+                          borderBottom: trackIndex === allTracks.length - 1 ? `1px solid ${dividerColor}` : 'none',
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+
                 {/* Render each track */}
                 {allTracks.map((track, trackIndex) => (
                   <TrackRow
@@ -870,7 +894,7 @@ export default function TimelineView() {
 }
 
 // Track label component for the fixed sidebar
-function TrackLabel({ track, trackIndex, theme, onEdit }) {
+function TrackLabel({ track, trackIndex, totalTracks, theme, onEdit }) {
   // Split long track names into multiple lines (word-wrap aware)
   const nameLines = useMemo(() => {
     const name = track.name || '';
@@ -899,6 +923,11 @@ function TrackLabel({ track, trackIndex, theme, onEdit }) {
     return lines;
   }, [track.name]);
 
+  // Per-track subtle tint + divider, matching the timeline lane bands on the right
+  const laneBg = theme === 'fantasy' ? `${track.color}0A` : `${track.color}12`;
+  const laneDividerColor = theme === 'fantasy' ? `${track.color}33` : `${track.color}40`;
+  const isLast = typeof totalTracks === 'number' && trackIndex === totalTracks - 1;
+
   return (
     <div
       data-testid={`track-label-${track.id}`}
@@ -907,7 +936,13 @@ function TrackLabel({ track, trackIndex, theme, onEdit }) {
           ? 'hover:bg-fantasy-gold/10 border-l-4 border-transparent hover:border-fantasy-gold' 
           : 'hover:bg-scifi-cyan/5 border-l-2 border-transparent hover:border-scifi-cyan'
       }`}
-      style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 25 }}
+      style={{
+        height: TRACK_HEIGHT,
+        paddingTop: AXIS_OFFSET - 25,
+        backgroundColor: laneBg,
+        borderTop: trackIndex > 0 ? `1px solid ${laneDividerColor}` : undefined,
+        borderBottom: isLast ? `1px solid ${laneDividerColor}` : undefined,
+      }}
       onClick={() => onEdit(track)}
       title={`${track.name} - Click to edit track`}
     >
