@@ -24,8 +24,8 @@ import { Plus, ArrowLeft, Settings, Pencil, X, Globe } from 'lucide-react';
 const BASE_PX_PER_YEAR = 0.8;
 const MIN_ZOOM = 0.1;
 const TIMELINE_PADDING = 120;
-const TRACK_HEIGHT = 200;
-const AXIS_OFFSET = 115;
+const TRACK_HEIGHT = 270;
+const AXIS_OFFSET = 135;
 const EVENT_LABEL_WIDTH = 240;
 const EVENT_LABEL_GUTTER = 12;
 const TRACK_CONTENT_START = Math.ceil(EVENT_LABEL_WIDTH / 2) + EVENT_LABEL_GUTTER;
@@ -424,7 +424,12 @@ export default function TimelineView() {
   const pixelsPerYear = BASE_PX_PER_YEAR * zoom;
   const totalWidth = (effectiveMasterRange.end - effectiveMasterRange.start) * pixelsPerYear;
 
-  // Zoom via scroll wheel (also track scrolling state)
+  // Keep latest zoom in a ref so the wheel handler can read the current value
+  // without re-binding the listener on every zoom change.
+  const zoomRef = useRef(zoom);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
+  // Zoom via scroll wheel, centered on the mouse pointer (also tracks scrolling state)
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -438,8 +443,32 @@ export default function TimelineView() {
 
       if (e.shiftKey) return;
       e.preventDefault();
-      const delta = e.deltaY > 0 ? 0.92 : 1.08;
-      setZoom(prev => Math.max(prev * delta, MIN_ZOOM));
+
+      const rawDelta = e.deltaY > 0 ? 0.92 : 1.08;
+      const prevZoom = zoomRef.current;
+      const nextZoom = Math.max(prevZoom * rawDelta, MIN_ZOOM);
+      if (nextZoom === prevZoom) return;
+      const actualDelta = nextZoom / prevZoom;
+
+      // Anchor the zoom on the cursor: keep the year currently under the
+      // pointer at the same screen position after the zoom. The track content
+      // starts after a constant TRACK_CONTENT_START offset that does NOT scale
+      // with zoom, so only the year-bearing portion of the content is scaled.
+      const rect = el.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const contentXBefore = el.scrollLeft + mouseX;
+      const yearPartBefore = contentXBefore - TRACK_CONTENT_START;
+      const yearPartAfter = yearPartBefore * actualDelta;
+      const newScrollLeft = TRACK_CONTENT_START + yearPartAfter - mouseX;
+
+      setZoom(nextZoom);
+      // Apply the scroll adjustment after the new pixelsPerYear has been
+      // committed to the DOM so the container has the correct scroll width.
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollLeft = Math.max(0, newScrollLeft);
+        }
+      });
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
@@ -653,6 +682,7 @@ export default function TimelineView() {
                   key={track.id}
                   track={track}
                   trackIndex={trackIndex}
+                  totalTracks={allTracks.length}
                   theme={theme}
                   onEdit={setEditingTrack}
                 />
@@ -713,6 +743,29 @@ export default function TimelineView() {
               />
             ) : (
               <>
+                {/* Track lane bands: subtle full-width tint per track for visual grouping */}
+                <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                  {allTracks.map((track, trackIndex) => {
+                    const bandTop = trackIndex * TRACK_HEIGHT + 20;
+                    const bandBg = theme === 'fantasy' ? `${track.color}0A` : `${track.color}12`;
+                    const dividerColor = theme === 'fantasy' ? `${track.color}33` : `${track.color}40`;
+                    return (
+                      <div
+                        key={`lane-${track.id}`}
+                        data-testid={`track-lane-${track.id}`}
+                        className="absolute left-0 right-0"
+                        style={{
+                          top: bandTop,
+                          height: TRACK_HEIGHT,
+                          backgroundColor: bandBg,
+                          borderTop: trackIndex === 0 ? 'none' : `1px solid ${dividerColor}`,
+                          borderBottom: trackIndex === allTracks.length - 1 ? `1px solid ${dividerColor}` : 'none',
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+
                 {/* Render each track */}
                 {allTracks.map((track, trackIndex) => (
                   <TrackRow
@@ -841,7 +894,7 @@ export default function TimelineView() {
 }
 
 // Track label component for the fixed sidebar
-function TrackLabel({ track, trackIndex, theme, onEdit }) {
+function TrackLabel({ track, trackIndex, totalTracks, theme, onEdit }) {
   // Split long track names into multiple lines (word-wrap aware)
   const nameLines = useMemo(() => {
     const name = track.name || '';
@@ -870,6 +923,11 @@ function TrackLabel({ track, trackIndex, theme, onEdit }) {
     return lines;
   }, [track.name]);
 
+  // Per-track subtle tint + divider, matching the timeline lane bands on the right
+  const laneBg = theme === 'fantasy' ? `${track.color}0A` : `${track.color}12`;
+  const laneDividerColor = theme === 'fantasy' ? `${track.color}33` : `${track.color}40`;
+  const isLast = typeof totalTracks === 'number' && trackIndex === totalTracks - 1;
+
   return (
     <div
       data-testid={`track-label-${track.id}`}
@@ -878,7 +936,13 @@ function TrackLabel({ track, trackIndex, theme, onEdit }) {
           ? 'hover:bg-fantasy-gold/10 border-l-4 border-transparent hover:border-fantasy-gold' 
           : 'hover:bg-scifi-cyan/5 border-l-2 border-transparent hover:border-scifi-cyan'
       }`}
-      style={{ height: TRACK_HEIGHT, paddingTop: AXIS_OFFSET - 25 }}
+      style={{
+        height: TRACK_HEIGHT,
+        paddingTop: AXIS_OFFSET - 25,
+        backgroundColor: laneBg,
+        borderTop: trackIndex > 0 ? `1px solid ${laneDividerColor}` : undefined,
+        borderBottom: isLast ? `1px solid ${laneDividerColor}` : undefined,
+      }}
       onClick={() => onEdit(track)}
       title={`${track.name} - Click to edit track`}
     >
@@ -1360,8 +1424,8 @@ function TrackRow({
                 borderLeft: isUndated ? `1px dashed ${track.color}60` : 'none',
                 width: isUndated ? 0 : 1,
                 ...(evt.above
-                  ? { bottom: 0, height: 75 }
-                  : { top: 0, height: 75 }
+                  ? { bottom: 0, height: 50 }
+                  : { top: 0, height: 50 }
                 ),
               }}
             />
@@ -1374,10 +1438,10 @@ function TrackRow({
               }}
               className={`relative z-20 transition-all duration-200 ${
                 isUndated
-                  ? 'w-5 h-5 rounded-full hover:scale-125'
+                  ? 'w-[21px] h-[21px] rounded-full hover:scale-125'
                   : theme === 'fantasy'
-                    ? 'w-4 h-4 rounded-full border-2 hover:scale-150'
-                    : 'w-4 h-4 rotate-45 border hover:scale-150'
+                    ? 'w-[17px] h-[17px] rounded-full border-2 hover:scale-150'
+                    : 'w-[17px] h-[17px] rotate-45 border hover:scale-150'
               }`}
               style={{
                 backgroundColor: isUndated
@@ -1393,7 +1457,7 @@ function TrackRow({
                   : theme === 'scifi'
                     ? `0 0 8px ${track.color}`
                     : 'none',
-                marginTop: isUndated ? -8 : -6,
+                marginTop: isUndated ? -10.5 : -8.5,
                 transform: isExpanded ? 'scale(1.5)' : undefined,
               }}
               title={isUndated ? `${evt.title} (undated - approximate position)` : evt.title}
@@ -1403,7 +1467,7 @@ function TrackRow({
             <div
               className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none pointer-events-none"
               style={{
-                ...(evt.above ? { bottom: 16, marginBottom: 57 } : { top: 16, marginTop: 57 }),
+                ...(evt.above ? { bottom: 16, marginBottom: 38 } : { top: 16, marginTop: 38 }),
                 width: showLabel ? evt.labelWidth : MIN_LABEL_WIDTH,
                 maxWidth: EVENT_LABEL_WIDTH,
               }}

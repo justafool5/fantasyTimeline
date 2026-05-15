@@ -183,6 +183,7 @@ Rules:
 - Nearby events cluster into count bubbles; clicking a cluster recenters and zooms enough to try splitting it
 - Visible labels can show up to 3 colored tag chips plus overflow text
 - Hidden labels can show tiny colored rectangular tag chips
+- Undated events expose an optional `placementYear` in the create and edit dialogs that overrides anchor interpolation
 
 ---
 
@@ -281,4 +282,3 @@ Status check:
 - year-level positioning only; month/day are reserved
 - no mobile-first interaction model yet
 - no tag filtering/search yet
-- no UI for editing `placementYear`

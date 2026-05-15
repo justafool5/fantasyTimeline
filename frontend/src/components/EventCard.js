@@ -78,6 +78,7 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
     if (isUndated) {
       base.afterEvent = event.afterEvent || '';
       base.beforeEvent = event.beforeEvent || '';
+      base.placementYear = Number.isFinite(event.placementYear) ? String(event.placementYear) : '';
     } else if (isCrossTrack) {
       if (event.type === 'point') {
         base.masterYear = event.masterDate?.year || 0;
@@ -114,6 +115,16 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
     if (isUndated) {
       updates.afterEvent = form.afterEvent || null;
       updates.beforeEvent = form.beforeEvent || null;
+
+      // Optional placementYear overrides anchor interpolation (rendering only).
+      // Empty string clears the override; otherwise persist as a finite number.
+      const placementRaw = typeof form.placementYear === 'string' ? form.placementYear.trim() : form.placementYear;
+      if (placementRaw === '' || placementRaw === null || placementRaw === undefined) {
+        updates.placementYear = null;
+      } else {
+        const parsedPlacement = Number(placementRaw);
+        updates.placementYear = Number.isFinite(parsedPlacement) ? parsedPlacement : null;
+      }
     } else if (isCrossTrack) {
       if (event.type === 'point') {
         updates.masterDate = { year: parseInt(form.masterYear) };
@@ -301,6 +312,22 @@ export default function EventCard({ event, tracks, onClose, onDrillIn }) {
                       );
                     })}
                   </select>
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    Placement Year (optional{!isCrossTrack && track?.abbr ? `, ${track.abbr}` : ''})
+                  </label>
+                  <input
+                    data-testid="edit-placement-year-input"
+                    type="number"
+                    value={form.placementYear ?? ''}
+                    onChange={e => setForm(f => ({ ...f, placementYear: e.target.value }))}
+                    className={inputClass}
+                    placeholder="Leave empty to use anchors"
+                  />
+                  <p className={`text-xs mt-1 ${theme === 'fantasy' ? 'text-fantasy-muted/60' : 'text-scifi-muted'}`}>
+                    Overrides anchor interpolation and pins the event to this exact year.
+                  </p>
                 </div>
               </div>
             ) : isCrossTrack ? (
